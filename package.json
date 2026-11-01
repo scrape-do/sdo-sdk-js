@@ -1,0 +1,77 @@
+{
+  "name": "@scrape-do/sdk",
+  "version": "0.1.0",
+  "description": "Official JavaScript/TypeScript SDK for the Scrape.do web-scraping API",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "NOTICE",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --dts --clean --target node20 --external cheerio --splitting",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:cov": "vitest run --coverage",
+    "check:dist": "node tools/check-dist.mjs",
+    "api:surface": "node tools/api-surface.mjs"
+  },
+  "keywords": [
+    "scraping",
+    "web-scraping",
+    "scrapedo",
+    "scrape.do",
+    "proxy",
+    "sdk"
+  ],
+  "author": "Scrape.do <opensource@scrape.do>",
+  "license": "Apache-2.0",
+  "homepage": "https://scrape.do",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/scrape-do/sdo-sdk-js"
+  },
+  "bugs": {
+    "url": "https://github.com/scrape-do/sdo-sdk-js/issues"
+  },
+  "peerDependencies": {
+    "cheerio": "^1.0.0"
+  },
+  "peerDependenciesMeta": {
+    "cheerio": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "@vitest/coverage-v8": "5.0.5",
+    "cheerio": "^1.2.0",
+    "tsup": "9.0.0",
+    "typescript": "^6.0.3",
+    "vitest": "5.0.5"
+  },
+  "overrides": {
+    "esbuild": "^0.28.1"
+  }
+}

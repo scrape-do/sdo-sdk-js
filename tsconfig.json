@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022", "DOM"],
+    "declaration": true,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "types": ["node"],
+    "outDir": "dist",
+    "rootDir": ".",
+    // tsup's declaration build sets baseUrl, which TypeScript 6 reports as
+    // deprecated; remove this once tsup stops setting it.
+    "ignoreDeprecations": "6.0"
+  },
+  "include": ["src", "test", "examples"]
+}

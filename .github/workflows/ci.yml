@@ -1,0 +1,102 @@
+# SPDX-License-Identifier: Apache-2.0
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions: {}
+
+# Every job runs on GitHub-hosted runners: free for a public repository, a
+# clean image every time, and no code from outside the org ever reaches the
+# org's persistent self-hosted runners. CodeQL is the one exception: uploading
+# its results is a GitHub API call, which the org's IP allow list only accepts
+# from the self-hosted runners, so same-repository events analyse there; a pull
+# request from a fork analyses on a GitHub-hosted runner and keeps its SARIF as
+# an artifact instead.
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        node: ["22", "24"] # engines.node's floor, and the current release
+        include:
+          - { os: macos-latest, node: "24" }
+          - { os: windows-latest, node: "24" }
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ matrix.node }}
+      - run: npm ci --ignore-scripts
+      - run: npm run typecheck
+      - run: npm run test:cov
+      - run: npm run build
+      # dist/ must hold only this SDK's code (no bundled node_modules), and the
+      # ESM build, the CJS build and node16 TypeScript consumers must all load it.
+      - run: npm run check:dist
+
+  api-surface:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+      - run: npm ci --ignore-scripts
+      - name: Regenerate public API surface golden
+        run: npm run api:surface
+      - name: Fail on API surface drift
+        run: |
+          if ! git diff --exit-code -- api-surface.txt || [ -n "$(git status --porcelain -- api-surface.txt)" ]; then
+            echo "::error::Public API surface changed. Review the diff above, then run 'npm run api:surface' and commit the updated api-surface.txt."
+            exit 1
+          fi
+
+  codeql:
+    runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && 'self-hosted' || 'ubuntu-latest' }}
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    steps:
+      # The persistent runners may still hold root-owned files that an older,
+      # container-based job left in this workspace; reclaim them before the
+      # checkout cleans it.
+      - name: Reclaim the workspace
+        if: runner.environment == 'self-hosted'
+        working-directory: ${{ github.workspace }}
+        run: docker run --rm -v "$PWD:/w" golang:1.27 chown -R "$(id -u):$(id -g)" /w
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # TypeScript extraction runs on Node.js, which the self-hosted runners
+      # do not ship.
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+      - uses: github/codeql-action/init@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          languages: javascript-typescript
+      - uses: github/codeql-action/analyze@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          upload: ${{ runner.environment == 'self-hosted' && 'always' || 'never' }}
+          output: codeql-sarif
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: runner.environment != 'self-hosted'
+        with:
+          name: codeql-sarif
+          path: codeql-sarif/
+          retention-days: 5

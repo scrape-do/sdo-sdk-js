@@ -1,0 +1,39 @@
+# SPDX-License-Identifier: Apache-2.0
+# Weekly dependency and action updates. The cooldown holds a new release back
+# for a week, so a compromised or broken version has time to be caught upstream
+# before it is proposed here.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+    groups:
+      # vitest and @vitest/coverage-v8 are pinned to the exact same version;
+      # either one bumped alone fails `npm ci` with ERESOLVE.
+      vitest:
+        patterns:
+          - "vitest"
+          - "@vitest/*"
+    ignore:
+      # engines.node is ">=22", so the types track Node 22: newer @types/node
+      # majors would let code typecheck against APIs Node 22 lacks.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+      # TypeScript 7 (the native compiler) breaks tsup's dts build and
+      # tools/api-surface.mjs, which use the TypeScript compiler API.
+      - dependency-name: "typescript"
+        versions: [">=7"]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 10
+    groups:
+      github-actions:
+        patterns: ["*"]
