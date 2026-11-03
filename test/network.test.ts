@@ -193,7 +193,7 @@ describe("the caller's AbortSignal", () => {
       client.jobs.create(["https://e.com"], {}, call),
       client.jobs.status("j", call),
       client.jobs.result("j", "t", call),
-      client.jobs.list(call),
+      client.jobs.list({}, call),
       client.jobs.cancel("j", call),
       client.jobs.me(call),
     ]) {

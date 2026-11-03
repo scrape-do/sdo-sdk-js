@@ -34,8 +34,17 @@ if (taskId !== undefined) {
   console.log("task result:", result.statusCode, (result.content ?? "").slice(0, 120));
 }
 
-// List every job, inspect account concurrency/credits, or cancel a pending job:
-console.log("all jobs:", (await client.jobs.list()).length);
+// Submit a plugin job: one task per params entry (at most 1000).
+const pluginJob = await client.jobs.createPlugin("amazon/pdp", [
+  { asin: "B0C7BKZ883", geocode: "us" },
+  { asin: "B0BSHF7WHW", geocode: "us" },
+]);
+console.log("plugin job:", pluginJob.jobId, "tasks:", pluginJob.taskIds.length);
+
+// List jobs a page at a time (filters and sort optional), inspect account
+// concurrency/credits, or cancel a pending job:
+const page = await client.jobs.list({ status: "success", pageSize: 25 });
+console.log("successful jobs:", page.totalCount, "on", page.totalPages, "pages");
 const account = await client.jobs.me();
 console.log("credits:", account.availableCredits, "free concurrency:", account.freeConcurrency);
 // await client.jobs.cancel(jobId);

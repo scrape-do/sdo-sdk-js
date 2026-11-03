@@ -13,10 +13,17 @@ export { type Usage } from "./usage.js";
 export { type FetchLike } from "./http.js";
 export {
   TaskResult,
+  JOB_STATUSES,
+  JOB_SORTS,
+  MAX_PLUGIN_PARAMS,
   type AsyncJobs,
   type CallOptions,
   type Job,
+  type JobPage,
+  type JobSort,
   type JobStatus,
+  type JobStatusValue,
+  type ListJobsOptions,
   type Task,
   type Account,
 } from "./jobs.js";

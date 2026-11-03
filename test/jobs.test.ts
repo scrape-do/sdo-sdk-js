@@ -134,7 +134,7 @@ describe("AsyncJobs.list", () => {
         ],
       }),
     );
-    const jobs = await client(f).jobs.list();
+    const { jobs } = await client(f).jobs.list();
 
     expect(jobs).toHaveLength(1);
     expect(jobs[0]!.jobId).toBe("job-1");
@@ -227,7 +227,7 @@ describe("AsyncJobs input and response shapes", () => {
 
   it("reads absent or mistyped fields as absent (lists empty, flags false)", async () => {
     const f = mockFetch(() => json({ Jobs: [{ JobID: 5, Tasks: [null, { TaskID: "t" }] }, "junk"] }));
-    const [only, ...rest] = await client(f).jobs.list();
+    const [only, ...rest] = (await client(f).jobs.list()).jobs;
     expect(rest).toEqual([]);
     expect(only).toEqual({
       jobId: undefined,
@@ -235,6 +235,8 @@ describe("AsyncJobs input and response shapes", () => {
       status: undefined,
       startTime: undefined,
       endTime: undefined,
+      acquiredConcurrency: undefined,
+      limitConcurrency: undefined,
       canceled: false,
       tasks: [{ taskId: "t", url: undefined, status: undefined }],
     });
@@ -271,5 +273,113 @@ describe("TaskResult.contentBytes", () => {
     expect(bytesOf(content).length).toBe(6 * 1024 * 1024);
     expect(() => bytesOf(content + "Q")).toThrow("not valid base64");
     expect(() => bytesOf(content.slice(0, -1) + "!")).toThrow("not valid base64");
+  });
+});
+
+describe("AsyncJobs.createPlugin", () => {
+  it("POSTs a Plugin {Key, Params} body with the options and no Targets", async () => {
+    const f = mockFetch(() => json({ JobID: "job-p", TaskIDs: ["t1", "t2"] }));
+    const params = [
+      { asin: "B0A", geocode: "us" },
+      { asin: "B0B", geocode: "de" },
+    ];
+    const job = await client(f).jobs.createPlugin("amazon/pdp", params, { WebhookURL: "https://example.com/hook" });
+
+    expect(job).toEqual({ jobId: "job-p", message: undefined, taskIds: ["t1", "t2"] });
+    expect(pathOf(f)).toBe("/api/v1/jobs");
+    expect(f.calls[0]!.init?.method).toBe("POST");
+    const body = JSON.parse(bodyText(f.calls[0]!.init)!);
+    expect(body).toEqual({ Plugin: { Key: "amazon/pdp", Params: params }, WebhookURL: "https://example.com/hook" });
+  });
+
+  it("defaults options to an empty object", async () => {
+    const f = mockFetch(() => json({ JobID: "j" }));
+    await client(f).jobs.createPlugin("google/search", [{ q: "x" }]);
+    expect(JSON.parse(bodyText(f.calls[0]!.init)!)).toEqual({ Plugin: { Key: "google/search", Params: [{ q: "x" }] } });
+  });
+
+  it("refuses a plugin job it cannot express, before any request", async () => {
+    const f = mockFetch(() => json({}));
+    const jobs = client(f).jobs;
+    const tooMany = Array.from({ length: 1001 }, () => ({ q: "x" }));
+    for (const p of [
+      jobs.createPlugin("amazon", [{ q: "x" }]),
+      jobs.createPlugin("amazon/pdp?x=1", [{ q: "x" }]),
+      jobs.createPlugin(5 as never, [{ q: "x" }]),
+      jobs.createPlugin("amazon/pdp", []),
+      jobs.createPlugin("amazon/pdp", "x" as never),
+      jobs.createPlugin("amazon/pdp", tooMany),
+      jobs.createPlugin("amazon/pdp", [null as never]),
+      jobs.createPlugin("amazon/pdp", [{ q: "x" }], { Targets: ["https://a.com"] }),
+      jobs.createPlugin("amazon/pdp", [{ q: "x" }], [] as never),
+      jobs.create(["https://a.com"], { plugin: {} }),
+    ]) {
+      await expect(p).rejects.toBeInstanceOf(SdoConfigError);
+    }
+    expect(f.calls).toHaveLength(0);
+  });
+});
+
+describe("AsyncJobs.list paging and filters", () => {
+  it("sends every documented filter and parses the page metadata", async () => {
+    const f = mockFetch(() =>
+      json({
+        Jobs: [{ JobID: "a", Status: "success", AcquiredConcurrency: 2, LimitConcurrency: 3 }],
+        TotalCount: 150,
+        PageSize: 25,
+        PageNumber: 2,
+        TotalPages: 6,
+      }),
+    );
+    const page = await client(f).jobs.list({
+      page: 2,
+      pageSize: 25,
+      status: "success",
+      startFrom: new Date("2025-01-01T00:00:00.000Z"),
+      startTo: "2025-01-31T23:59:59Z",
+      sort: "start_time_asc",
+    });
+    const q = new URL(f.calls[0]!.url).searchParams;
+    expect(Object.fromEntries(q)).toEqual({
+      page: "2",
+      page_size: "25",
+      status: "success",
+      start_from: "2025-01-01T00:00:00Z",
+      start_to: "2025-01-31T23:59:59Z",
+      sort: "start_time_asc",
+    });
+    expect(page.totalCount).toBe(150);
+    expect(page.pageSize).toBe(25);
+    expect(page.pageNumber).toBe(2);
+    expect(page.totalPages).toBe(6);
+    expect(page.jobs[0]!.acquiredConcurrency).toBe(2);
+    expect(page.jobs[0]!.limitConcurrency).toBe(3);
+  });
+
+  it("sends no query for empty options", async () => {
+    const f = mockFetch(() => json({ Jobs: [] }));
+    await client(f).jobs.list({});
+    expect(queryOf(f)).toBe("");
+  });
+
+  it("refuses options outside the documented values, before any request", async () => {
+    const f = mockFetch(() => json({}));
+    const jobs = client(f).jobs;
+    for (const o of [
+      { page: 0 },
+      { page: 1.5 },
+      { pageSize: 101 },
+      { pageSize: "10" },
+      { status: "done" },
+      { sort: "newest" },
+      { startFrom: "2025-01-01" },
+      { startFrom: "2025-01-01t00:00:00z" },
+      { startTo: new Date("nope") },
+      { startTo: 5 },
+    ]) {
+      await expect(jobs.list(o as never)).rejects.toBeInstanceOf(SdoConfigError);
+    }
+    await expect(jobs.list([] as never)).rejects.toBeInstanceOf(SdoConfigError);
+    expect(f.calls).toHaveLength(0);
   });
 });

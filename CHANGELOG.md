@@ -4,6 +4,28 @@
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- `jobs.createPlugin(key, params, options?, call?)`: plugin jobs on the async
+  API (`{"Plugin": {"Key": ..., "Params": [...]}}`), one task per params entry,
+  1 to 1000 entries. A malformed key, an empty or oversized list, or options
+  that set `Targets` or `Plugin` throw `SdoConfigError`.
+- `ListJobsOptions` (`page`, `pageSize` 1-100, `status`, `startFrom` /
+  `startTo` as a Date or RFC 3339 string, `sort`) and `JobPage` (`jobs`,
+  `totalCount`, `pageSize`, `pageNumber`, `totalPages`) for the paginated job
+  list; `JOB_STATUSES`, `JOB_SORTS` and `MAX_PLUGIN_PARAMS`.
+- `JobStatus.acquiredConcurrency` and `JobStatus.limitConcurrency`.
+
+### Changed
+
+- **Breaking:** `jobs.list(call?)` is now `jobs.list(options?, call?)` and
+  resolves to a `JobPage`. The endpoint is paginated (10 jobs a page by
+  default), so the old method silently returned only the first page while
+  documenting "all jobs". Read `.jobs` for the list.
+- `jobs.create` also refuses options that set `Plugin`.
+
 ## [0.1.0] - 2026-11-01
 
 The first release of `@scrape-do/sdk`, the JavaScript/TypeScript SDK for the

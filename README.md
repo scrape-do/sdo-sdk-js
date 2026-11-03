@@ -246,13 +246,33 @@ if (taskId !== undefined) {
   const bytes = result.contentBytes(); // base64-decoded when result.base64EncodedContent
 }
 
-const all = await client.jobs.list(); // JobStatus[]
+// A plugin job: one task per params entry (at most 1000), with the plugin's own
+// parameter names. Targets and a plugin cannot be combined in one job.
+const pluginJob = await client.jobs.createPlugin("amazon/pdp", [
+  { asin: "B0C7BKZ883", geocode: "us" },
+  { asin: "B0BSHF7WHW", geocode: "us" },
+]);
+
+// The job list is paginated (default: the 10 most recent). Filter by status and
+// start time, sort, and walk `page` up to `totalPages`.
+const page = await client.jobs.list({
+  status: "success",
+  startFrom: new Date("2025-01-01T00:00:00Z"), // or an RFC 3339 string
+  sort: "start_time_asc",
+  page: 2,
+  pageSize: 25, // 1-100
+}); // { jobs: JobStatus[], totalCount, pageSize, pageNumber, totalPages }
 const account = await client.jobs.me(); // { totalConcurrency, freeConcurrency, activeJobs, availableCredits }
 await client.jobs.cancel(job.jobId!);
 ```
 
-Every method returns a typed object (`Job`, `JobStatus`, `Task`, `TaskResult`,
-`Account`). A field the API leaves out, or sends with an unexpected type, reads
+Every method returns a typed object (`Job`, `JobStatus`, `JobPage`, `Task`,
+`TaskResult`, `Account`). An invalid plugin key, an empty or oversized `params`
+list, options that set `Targets` or `Plugin`, and `list` options outside the
+documented values throw `SdoConfigError` before anything is sent. The async API
+has its own concurrency pool (30% of the plan's limit, not taken from the main
+API's); `JobStatus.acquiredConcurrency` and `limitConcurrency` report a job's
+share of it. A field the API leaves out, or sends with an unexpected type, reads
 as `undefined` (lists as `[]`, flags as `false`); a response that is not a JSON
 object is a `SdoTransportError`, and so is `contentBytes()` on content flagged
 as base64 that is not valid base64 (line breaks inside it are ignored). `cancel()` succeeds on any 2xx. Any non-2xx
