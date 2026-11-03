@@ -99,7 +99,7 @@ describe("client option resolution", () => {
       async (server) => {
         const c = new Client({ token: "t", retries: 0, baseUrl: server.url, asyncBaseUrl: server.url });
         expect(new TextDecoder().decode((await c.scrape("https://e.com")).bytes())).toBe("from node");
-        expect(await c.jobs.list()).toEqual([]); // jobs use the same transport
+        expect((await c.jobs.list()).jobs).toEqual([]); // jobs use the same transport
         expect(server.requests).toHaveLength(2);
       },
     );
@@ -292,7 +292,7 @@ describe("async job responses with fields omitted", () => {
     expect(st.taskIds).toEqual([]);
     expect(st.canceled).toBe(false);
     expect(st.tasks).toEqual([]);
-    expect(await jobsClient({}).list()).toEqual([]);
+    expect((await jobsClient({}).list()).jobs).toEqual([]);
   });
 
   it("surfaces a failed cancel as a typed error with the envelope message", async () => {

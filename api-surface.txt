@@ -16,6 +16,9 @@ class SdoTimeoutError extends SdoTransportError
 class SdoTransportError extends SdoError
 class SdoValidationError extends SdoApiError
 class TaskResult
+const JOB_SORTS: readonly [ "start_time_desc", "start_time_asc" ]
+const JOB_STATUSES: readonly [ "queuing", "queued", "pending", "rotating", "success", "error", "canceled" ]
+const MAX_PLUGIN_PARAMS: number
 const VERSION: string
 ctor Client.constructor
 ctor ScrapeConfig.constructor
@@ -32,7 +35,9 @@ interface AsyncJobs
 interface CallOptions
 interface ClientOptions
 interface Job
+interface JobPage
 interface JobStatus
+interface ListJobsOptions
 interface RequestOptions
 interface ScrapeOptions
 interface ScrapeResultInit
@@ -41,7 +46,8 @@ interface Task
 interface Usage
 method AsyncJobs.cancel -> Promise<void>
 method AsyncJobs.create -> Promise<Job>
-method AsyncJobs.list -> Promise<JobStatus[]>
+method AsyncJobs.createPlugin -> Promise<Job>
+method AsyncJobs.list -> Promise<JobPage>
 method AsyncJobs.me -> Promise<Account>
 method AsyncJobs.result -> Promise<TaskResult>
 method AsyncJobs.status -> Promise<JobStatus>
@@ -61,7 +67,12 @@ param AsyncJobs.cancel #1 call?: CallOptions
 param AsyncJobs.create #0 targets: string[] [required]
 param AsyncJobs.create #1 options?: Record<string, unknown>
 param AsyncJobs.create #2 call?: CallOptions
-param AsyncJobs.list #0 call?: CallOptions
+param AsyncJobs.createPlugin #0 key: string [required]
+param AsyncJobs.createPlugin #1 params: Record<string, unknown>[] [required]
+param AsyncJobs.createPlugin #2 options?: Record<string, unknown>
+param AsyncJobs.createPlugin #3 call?: CallOptions
+param AsyncJobs.list #0 options?: ListJobsOptions
+param AsyncJobs.list #1 call?: CallOptions
 param AsyncJobs.me #0 call?: CallOptions
 param AsyncJobs.result #0 jobId: string [required]
 param AsyncJobs.result #1 taskId: string [required]
@@ -124,13 +135,26 @@ prop ClientOptions token?: string
 prop Job jobId?: string
 prop Job message?: string
 prop Job taskIds: string[]
+prop JobPage jobs: JobStatus[]
+prop JobPage pageNumber?: number
+prop JobPage pageSize?: number
+prop JobPage totalCount?: number
+prop JobPage totalPages?: number
+prop JobStatus acquiredConcurrency?: number
 prop JobStatus canceled: boolean
 prop JobStatus endTime?: string
 prop JobStatus jobId?: string
+prop JobStatus limitConcurrency?: number
 prop JobStatus startTime?: string
 prop JobStatus status?: string
 prop JobStatus taskIds: string[]
 prop JobStatus tasks: Task[]
+prop ListJobsOptions page?: number
+prop ListJobsOptions pageSize?: number
+prop ListJobsOptions sort?: JobSort
+prop ListJobsOptions startFrom?: Date | string
+prop ListJobsOptions startTo?: Date | string
+prop ListJobsOptions status?: JobStatusValue
 prop RequestOptions data?: string | Uint8Array | ArrayBuffer
 prop RequestOptions headers?: Record<string, string>
 prop RequestOptions json?: unknown
@@ -219,3 +243,5 @@ prop Usage maxMonthlyRequest: number
 prop Usage remainingConcurrentRequest: number
 prop Usage remainingMonthlyRequest: number
 type FetchLike = (url: string, init?: RequestInit) => Promise<Response>
+type JobSort = (typeof JOB_SORTS)[number]
+type JobStatusValue = (typeof JOB_STATUSES)[number]
