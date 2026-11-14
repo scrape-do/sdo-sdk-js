@@ -181,9 +181,10 @@ Every job runs on GitHub-hosted runners except CodeQL and Scorecard, which run o
 
 Releases are published from GitHub Actions (`.github/workflows/publish.yml`) when
 a `v*` tag is pushed: an unprivileged job builds and tests the package, and a
-second job, behind the `release` environment's approval, publishes it with npm
-trusted publishing (OIDC, no stored token) and provenance. Trusted publishing
-needs npm 11.5.1 or newer, so the publish job runs on Node.js 24.
+second job, behind the approval of the `prerelease` or `release` environment,
+publishes it with npm trusted publishing (OIDC, no stored token) and
+provenance. Trusted publishing needs npm 11.5.1 or newer, so the publish job
+runs on Node.js 24.
 
 The version lives in two files that must agree: `package.json` (`version`) and
 `src/version.ts` (`VERSION`, used in the User-Agent); a test checks them against
@@ -198,18 +199,38 @@ tag rule) before the first tag.
 
 One-time setup before the first release:
 
-1. In the repository settings, create the `release` environment with required
-   reviewers and a deployment rule limited to `v*` tags.
+1. In the repository settings, create both environments, `prerelease` and
+   `release`, each with required reviewers and a deployment rule limited to
+   `v*` tags. They are the approval gates: the publish job waits in one of them
+   until a maintainer approves.
 2. npm only lets you configure a trusted publisher for a package that already
-   exists, so the first version is published by hand: from a clean checkout of
-   the commit you will tag, run `npm ci && npm run build && npm run check:dist`,
-   then `npm publish --access public` with a short-lived token.
-3. On npmjs.com, configure the trusted publisher for `@scrape-do/sdk`: this
-   repository, workflow `publish.yml`, environment `release`. Revoke the token
-   used in step 2.
-4. Push the tag for that same version. The workflow still builds and tests it;
-   its publish job finds the version already on npm and skips the upload with a
-   notice instead of failing. Every later version is published by the workflow.
+   exists, so create the package by hand with a throwaway placeholder,
+   `0.0.0-bootstrap.0`, under the `bootstrap` dist-tag (never `latest`). Then
+   0.1.0 itself is published by the workflow, with provenance. From a clean
+   checkout of `main`, with a short-lived granular token that can publish to
+   the `@scrape-do` scope:
+
+   ```bash
+   npm version 0.0.0-bootstrap.0 --no-git-tag-version
+   npm publish --tag bootstrap   # dist/ is not built: the placeholder holds no code
+   git checkout -- package.json package-lock.json
+   ```
+
+3. On npmjs.com, configure the trusted publisher for `@scrape-do/sdk`:
+   repository `scrape-do/sdo-sdk-js`, workflow `publish.yml`, and leave the
+   environment field **empty**. npm allows one trusted publisher per package
+   and, when an environment is set, accepts only that one, but the workflow
+   publishes release candidates from `prerelease` and final versions from
+   `release`. The GitHub environments from step 1 still gate every publish.
+   Revoke the token used in step 2.
+4. Push the version tag (`v0.1.0-rc.1` or `v0.1.0`). The workflow builds, tests
+   and, after approval, publishes it; every later version is published the
+   same way. The registry may point `latest` at a new package's first version;
+   if `npm view @scrape-do/sdk dist-tags` shows that, it moves when the
+   workflow publishes the first final version.
+5. Once 0.1.0 is on npm, retire the placeholder:
+   `npm dist-tag rm @scrape-do/sdk bootstrap` and
+   `npm deprecate @scrape-do/sdk@0.0.0-bootstrap.0 "Placeholder that created the package; install @scrape-do/sdk@latest."`
 
 npm only accepts provenance from a public source repository; this repository
 is public, so the workflow publishes with provenance.
