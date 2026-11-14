@@ -125,7 +125,7 @@ const PARAMS: readonly Param[] = [
   // Free-form codes: sent exactly as given (the gateway normalizes them).
   { opt: "geoCode", wire: "geoCode", kind: STRING },
   { opt: "regionalGeoCode", wire: "regionalGeoCode", kind: STRING },
-  { opt: "zipCode", wire: "zipCode", kind: STRING },
+  { opt: "zipCode", wire: "zipcode", kind: STRING },
   { opt: "sessionId", wire: "sessionId", kind: { t: "session" } },
   { opt: "setCookies", wire: "setCookies", kind: STRING },
   { opt: "customHeaders", wire: "customHeaders", kind: BOOL },
