@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
-// Cross-language conformance: this SDK must match the shared generated corpus
-// (copied here by the codegen factory, never edited by hand). Every section of
+// Cross-language conformance: this SDK must match the corpus shared by the Go,
+// JavaScript and Python SDKs (maintained by Scrape.do against
+// https://scrape.do/documentation; never edited here). Every section of
 // the corpus is consumed below; a case whose `skip` lists "js" is skipped, and
 // an unknown section, key or case field fails the run.
 import { createHash } from "node:crypto";
@@ -8,7 +9,6 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 import { Client } from "../src/client.js";
 import { ScrapeConfig, type ScrapeOptions } from "../src/config.js";
-import { MAX_REQUEST_COST } from "../src/headers.js";
 import {
   redactSecrets,
   SdoApiError,
@@ -19,20 +19,21 @@ import {
   SdoTransportError,
   SdoValidationError,
 } from "../src/errors.js";
+import { MAX_REQUEST_COST } from "../src/headers.js";
 import { ID_PATTERN } from "../src/jobs.js";
 import { ROUTE_PATTERN } from "../src/plugins.js";
 import { pctEncode } from "../src/query.js";
 import { ScrapeResult } from "../src/response.js";
 import {
   BILLED_STATUSES,
-  effectiveTimeoutMs,
   ERROR_BODY_READ_BYTES,
+  effectiveTimeoutMs,
   GATEWAY_TIMEOUT_MARGIN_MS,
   MAX_BACKOFF_MS,
   MAX_RESPONSE_BYTES,
   parseRetryAfter,
-  retryAfterDelayMs,
   RETRYABLE_STATUSES,
+  retryAfterDelayMs,
 } from "../src/transport.js";
 import { VERSION } from "../src/version.js";
 import corpus from "./conformance.json";
@@ -62,7 +63,9 @@ const hex = (h: string) => Uint8Array.from(Buffer.from(h, "hex"));
 describe("corpus integrity", () => {
   it("matches its sha256 sidecar (no hand edits)", () => {
     const bytes = readFileSync(new URL("./conformance.json", import.meta.url));
-    const sidecar = readFileSync(new URL("./conformance.json.sha256", import.meta.url), "utf8").trim().split(/\s+/)[0];
+    const sidecar = readFileSync(new URL("./conformance.json.sha256", import.meta.url), "utf8")
+      .trim()
+      .split(/\s+/)[0];
     expect(createHash("sha256").update(bytes).digest("hex")).toBe(sidecar);
   });
 });
@@ -76,14 +79,46 @@ const CASE_FIELDS: Record<string, readonly string[]> = {
   "wire.scrape": ["name", "py", "js", "go", "token", "path", "query", "skip"],
   "wire.plugin": ["name", "route", "params", "token", "path", "query", "skip"],
   "wire.plugin_errors": ["name", "route", "params", "skip"],
-  "wire.prefixed": ["name", "base_url", "async_base_url", "scrape_path", "plugin_path", "jobs_path", "skip"],
+  "wire.prefixed": [
+    "name",
+    "base_url",
+    "async_base_url",
+    "scrape_path",
+    "plugin_path",
+    "jobs_path",
+    "skip",
+  ],
   "wire.routes": ["route", "valid"],
-  requests: ["name", "method", "json", "data", "headers", "expect_method", "body", "content_type", "error",
-    "expect_headers", "expect_header_names", "ignore_header_names", "skip"],
+  requests: [
+    "name",
+    "method",
+    "json",
+    "data",
+    "headers",
+    "expect_method",
+    "body",
+    "content_type",
+    "error",
+    "expect_headers",
+    "expect_header_names",
+    "ignore_header_names",
+    "skip",
+  ],
   "retry.attempts": ["name", "method", "status", "retries", "attempts", "transparent", "headers"],
   "retry.retry_after": ["value", "seconds"],
-  errors: ["name", "status", "kind", "billed", "retryable", "transparent", "headers", "body", "message",
-    "retained_body_chars", "cost"],
+  errors: [
+    "name",
+    "status",
+    "kind",
+    "billed",
+    "retryable",
+    "transparent",
+    "headers",
+    "body",
+    "message",
+    "retained_body_chars",
+    "cost",
+  ],
   decoding: ["name", "body_hex", "content_type", "text"],
   decompression: ["name", "content_encoding", "body_hex", "text", "error", "attempts"],
   json_bodies: ["name", "body_hex", "value", "error"],
@@ -103,22 +138,62 @@ const CASE_FIELDS: Record<string, readonly string[]> = {
 describe("corpus coverage", () => {
   it("has no section or key this harness does not consume", () => {
     expect(Object.keys(corpus).sort()).toEqual(
-      ["client", "contract", "decoding", "decompression", "edge", "errors", "jobs", "json_bodies", "redaction",
-        "requests", "retry", "serialization", "url", "version", "wire"].sort(),
+      [
+        "client",
+        "contract",
+        "decoding",
+        "decompression",
+        "edge",
+        "errors",
+        "jobs",
+        "json_bodies",
+        "redaction",
+        "requests",
+        "retry",
+        "serialization",
+        "url",
+        "version",
+        "wire",
+      ].sort(),
     );
-    expect(Object.keys(corpus.wire).sort()).toEqual(["plugin", "plugin_errors", "prefixed", "routes", "scrape"]);
+    expect(Object.keys(corpus.wire).sort()).toEqual([
+      "plugin",
+      "plugin_errors",
+      "prefixed",
+      "routes",
+      "scrape",
+    ]);
     expect(Object.keys(corpus.retry).sort()).toEqual(["attempts", "retry_after"]);
-    expect(Object.keys(corpus.jobs).sort()).toEqual(
-      ["account", "auth_header", "cancel_bodies", "create", "errors", "id_pattern", "ids", "task_results"],
-    );
-    expect(Object.keys(corpus.client).sort()).toEqual(
-      ["base_urls", "effective_timeouts", "empty_token_falls_back_to_env", "insecure_opt_in", "target_urls",
-        "timeouts", "tokens"],
-    );
-    expect(Object.keys(corpus.contract).sort()).toEqual(
-      ["decoding", "environment", "errors", "json_bodies", "plugin_route_pattern", "redaction", "serialization",
-        "transport", "user_agent"],
-    );
+    expect(Object.keys(corpus.jobs).sort()).toEqual([
+      "account",
+      "auth_header",
+      "cancel_bodies",
+      "create",
+      "errors",
+      "id_pattern",
+      "ids",
+      "task_results",
+    ]);
+    expect(Object.keys(corpus.client).sort()).toEqual([
+      "base_urls",
+      "effective_timeouts",
+      "empty_token_falls_back_to_env",
+      "insecure_opt_in",
+      "target_urls",
+      "timeouts",
+      "tokens",
+    ]);
+    expect(Object.keys(corpus.contract).sort()).toEqual([
+      "decoding",
+      "environment",
+      "errors",
+      "json_bodies",
+      "plugin_route_pattern",
+      "redaction",
+      "serialization",
+      "transport",
+      "user_agent",
+    ]);
   });
 
   it("has no case field this harness does not read", () => {
@@ -126,7 +201,8 @@ describe("corpus coverage", () => {
       path.split(".").reduce<unknown>((o, k) => (o as Record<string, unknown>)[k], corpus);
     for (const [path, fields] of Object.entries(CASE_FIELDS)) {
       for (const c of at(path) as Array<Record<string, unknown>>) {
-        for (const key of Object.keys(c)) expect(fields, `${path}: unknown case field '${key}'`).toContain(key);
+        for (const key of Object.keys(c))
+          expect(fields, `${path}: unknown case field '${key}'`).toContain(key);
       }
     }
   });
@@ -157,11 +233,21 @@ const jsonOk = () => ok("{}", { headers: { "content-type": "application/json" } 
 
 describe("wire conformance", () => {
   // Asserted on the URL handed to the transport, byte for byte: nothing re-parses it.
-  type WireCase = { name: string; js: Record<string, unknown>; token: string; path: string; query: string; skip?: string[] };
+  type WireCase = {
+    name: string;
+    js: Record<string, unknown>;
+    token: string;
+    path: string;
+    query: string;
+    skip?: string[];
+  };
   for (const c of corpus.wire.scrape as unknown as WireCase[]) {
     caseIt(c)(`scrape ${c.name}`, async () => {
       const f = mockFetch(() => ok());
-      await new Client({ token: c.token, retries: 0, fetchImpl: f }).scrape(corpus.url, c.js as ScrapeOptions);
+      await new Client({ token: c.token, retries: 0, fetchImpl: f }).scrape(
+        corpus.url,
+        c.js as ScrapeOptions,
+      );
       expect(f.calls).toHaveLength(1);
       const url = f.calls[0]!.url;
       expect(new URL(url).pathname).toBe(c.path);
@@ -169,8 +255,15 @@ describe("wire conformance", () => {
     });
   }
 
-  type PluginCase = { name: string; route: string; params: Record<string, unknown>; token: string; path: string;
-    query: string; skip?: string[] };
+  type PluginCase = {
+    name: string;
+    route: string;
+    params: Record<string, unknown>;
+    token: string;
+    path: string;
+    query: string;
+    skip?: string[];
+  };
   for (const c of corpus.wire.plugin as PluginCase[]) {
     caseIt(c)(`plugin ${c.name}`, async () => {
       const f = mockFetch(jsonOk);
@@ -181,26 +274,46 @@ describe("wire conformance", () => {
     });
   }
 
-  for (const c of corpus.wire.plugin_errors as Array<{ name: string; route: string; params: Record<string, unknown>;
-    skip?: string[] }>) {
+  for (const c of corpus.wire.plugin_errors as Array<{
+    name: string;
+    route: string;
+    params: Record<string, unknown>;
+    skip?: string[];
+  }>) {
     caseIt(c)(`plugin error ${c.name}`, async () => {
       const f = mockFetch(jsonOk);
-      await expect(new Client({ token: "TOK", fetchImpl: f }).plugin(c.route, c.params)).rejects.toBeInstanceOf(
-        SdoConfigError,
-      );
+      await expect(
+        new Client({ token: "TOK", fetchImpl: f }).plugin(c.route, c.params),
+      ).rejects.toBeInstanceOf(SdoConfigError);
       expect(f.calls).toHaveLength(0);
     });
   }
 
-  for (const c of corpus.wire.prefixed as Array<{ name: string; base_url: string; async_base_url: string;
-    scrape_path: string; plugin_path: string; jobs_path: string; skip?: string[] }>) {
+  for (const c of corpus.wire.prefixed as Array<{
+    name: string;
+    base_url: string;
+    async_base_url: string;
+    scrape_path: string;
+    plugin_path: string;
+    jobs_path: string;
+    skip?: string[];
+  }>) {
     caseIt(c)(`prefixed ${c.name}`, async () => {
       const f = mockFetch((u) => (u.includes("/api/v1/") ? ok("{}") : jsonOk()));
-      const client = new Client({ token: "TOK", baseUrl: c.base_url, asyncBaseUrl: c.async_base_url, fetchImpl: f });
+      const client = new Client({
+        token: "TOK",
+        baseUrl: c.base_url,
+        asyncBaseUrl: c.async_base_url,
+        fetchImpl: f,
+      });
       await client.scrape(corpus.url);
       await client.plugin("google/search");
       await client.jobs.status("j-1");
-      expect(f.calls.map((call) => new URL(call.url).pathname)).toEqual([c.scrape_path, c.plugin_path, c.jobs_path]);
+      expect(f.calls.map((call) => new URL(call.url).pathname)).toEqual([
+        c.scrape_path,
+        c.plugin_path,
+        c.jobs_path,
+      ]);
     });
   }
 
@@ -245,7 +358,8 @@ describe("requests conformance", () => {
           const client = new Client({ token: "TOK", retries: 0, baseUrl: server.url });
           // Only the inputs the case names are passed ("absent = not given").
           const req: Record<string, unknown> = {};
-          for (const key of ["method", "json", "data", "headers"] as const) if (key in c) req[key] = c[key];
+          for (const key of ["method", "json", "data", "headers"] as const)
+            if (key in c) req[key] = c[key];
           const call = client.scrape(corpus.url, req as ScrapeOptions);
           if (c.error === "config") {
             await expect(call).rejects.toBeInstanceOf(SdoConfigError);
@@ -257,14 +371,18 @@ describe("requests conformance", () => {
           expect(sent.method).toBe(c.expect_method);
           expect(sent.body.toString("utf8")).toBe(c.body ?? "");
           if (c.body === null) expect(received(sent, "transfer-encoding")).toEqual([]);
-          expect(received(sent, "content-type")).toEqual(c.content_type === null ? [] : [c.content_type]);
+          expect(received(sent, "content-type")).toEqual(
+            c.content_type === null ? [] : [c.content_type],
+          );
           for (const [name, values] of Object.entries(c.expect_headers ?? {})) {
             expect(received(sent, name), name).toEqual(values);
           }
           if (c.expect_header_names !== undefined) {
             // The full set of names sent, minus the HTTP layer's own framing headers.
             const ignored = new Set(c.ignore_header_names ?? []);
-            const names = [...new Set(sent.headers.map(([k]) => k.toLowerCase()))].filter((k) => !ignored.has(k));
+            const names = [...new Set(sent.headers.map(([k]) => k.toLowerCase()))].filter(
+              (k) => !ignored.has(k),
+            );
             expect(names.sort()).toEqual([...c.expect_header_names].sort());
           }
         },
@@ -275,7 +393,12 @@ describe("requests conformance", () => {
 
 describe("retry conformance", () => {
   for (const c of corpus.retry.attempts as Array<{
-    name: string; method: string; status: number; retries: number; attempts: number; transparent?: boolean;
+    name: string;
+    method: string;
+    status: number;
+    retries: number;
+    attempts: number;
+    transparent?: boolean;
     headers?: Record<string, string>;
   }>) {
     it(`attempts ${c.name}`, async () => {
@@ -315,15 +438,25 @@ function expectKind(err: unknown, kind: string): void {
 }
 
 type ErrorCase = {
-  name: string; status: number; kind: string | null; billed: boolean; retryable: boolean;
-  transparent?: boolean; headers?: Record<string, string>; body?: string; message?: string | null;
-  retained_body_chars?: number; cost?: number | null;
+  name: string;
+  status: number;
+  kind: string | null;
+  billed: boolean;
+  retryable: boolean;
+  transparent?: boolean;
+  headers?: Record<string, string>;
+  body?: string;
+  message?: string | null;
+  retained_body_chars?: number;
+  cost?: number | null;
 };
 
 function checkErrorCase(c: ErrorCase, outcome: unknown): void {
   if (c.kind === null) {
     expect((outcome as ScrapeResult).statusCode).toBe(c.status);
-    const raw = Object.entries(c.headers ?? {}).find(([k]) => k.toLowerCase() === "scrape.do-request-cost")?.[1];
+    const raw = Object.entries(c.headers ?? {}).find(
+      ([k]) => k.toLowerCase() === "scrape.do-request-cost",
+    )?.[1];
     if (raw !== undefined) expect((outcome as ScrapeResult).cost).toBe(Number(raw));
     return;
   }
@@ -335,14 +468,17 @@ function checkErrorCase(c: ErrorCase, outcome: unknown): void {
   if (c.message !== undefined && c.message !== null) expect(err.message).toBe(c.message);
   // null: no readable cost.
   if (c.cost !== undefined) expect(err.cost).toBe(c.cost ?? undefined);
-  if (c.retained_body_chars !== undefined) expect([...(err.body ?? "")].length).toBe(c.retained_body_chars);
+  if (c.retained_body_chars !== undefined)
+    expect([...(err.body ?? "")].length).toBe(c.retained_body_chars);
 }
 
 describe("errors conformance", () => {
   for (const c of corpus.errors as ErrorCase[]) {
     const options = c.transparent ? { transparentResponse: true } : {};
     it(`${c.name} (fetchImpl)`, async () => {
-      const f = mockFetch(() => new Response(c.body ?? null, { status: c.status, headers: c.headers ?? {} }));
+      const f = mockFetch(
+        () => new Response(c.body ?? null, { status: c.status, headers: c.headers ?? {} }),
+      );
       const client = new Client({ token: "TOK", retries: 0, backoffMs: 0, fetchImpl: f });
       checkErrorCase(c, await client.scrape(corpus.url, options).catch((e: unknown) => e));
     });
@@ -350,7 +486,9 @@ describe("errors conformance", () => {
     // A plugin call shares the status rules (it has no transparent mode).
     if (!c.transparent) {
       it(`${c.name} (plugin)`, async () => {
-        const f = mockFetch(() => new Response(c.body ?? null, { status: c.status, headers: c.headers ?? {} }));
+        const f = mockFetch(
+          () => new Response(c.body ?? null, { status: c.status, headers: c.headers ?? {} }),
+        );
         const client = new Client({ token: "TOK", retries: 0, backoffMs: 0, fetchImpl: f });
         const outcome = await client.plugin("google/search", { q: "x" }).catch((e: unknown) => e);
         if (c.kind === null) {
@@ -372,11 +510,15 @@ describe("errors conformance", () => {
           res.end(c.body ?? "");
         },
         async (server) => {
-          const client = new Client({ token: "TOK", retries: 0, backoffMs: 0, baseUrl: server.url });
+          const client = new Client({
+            token: "TOK",
+            retries: 0,
+            backoffMs: 0,
+            baseUrl: server.url,
+          });
           checkErrorCase(c, await client.scrape(corpus.url, options).catch((e: unknown) => e));
         },
-      ),
-    );
+      ));
   }
 });
 
@@ -384,7 +526,9 @@ describe("decoding conformance", () => {
   // Built the way the SDK builds every result: through a scrape.
   for (const c of corpus.decoding) {
     it(c.name, async () => {
-      const f = mockFetch(() => ok(hex(c.body_hex), { headers: c.content_type ? { "content-type": c.content_type } : {} }));
+      const f = mockFetch(() =>
+        ok(hex(c.body_hex), { headers: c.content_type ? { "content-type": c.content_type } : {} }),
+      );
       const result = await new Client({ token: "TOK", fetchImpl: f }).scrape(corpus.url);
       expect(result.text).toBe(c.text);
     });
@@ -393,8 +537,14 @@ describe("decoding conformance", () => {
 
 describe("decompression conformance", () => {
   // Served with the case's Content-Encoding, so the SDK's own decoder runs.
-  for (const c of corpus.decompression as Array<{ name: string; content_encoding: string; body_hex: string;
-    text?: string; error?: string; attempts?: number }>) {
+  for (const c of corpus.decompression as Array<{
+    name: string;
+    content_encoding: string;
+    body_hex: string;
+    text?: string;
+    error?: string;
+    attempts?: number;
+  }>) {
     it(c.name, () =>
       withServer(
         (_req, res) => {
@@ -402,7 +552,12 @@ describe("decompression conformance", () => {
           res.end(Buffer.from(c.body_hex, "hex"));
         },
         async (server) => {
-          const client = new Client({ token: "TOK", retries: 2, backoffMs: 0, baseUrl: server.url });
+          const client = new Client({
+            token: "TOK",
+            retries: 2,
+            backoffMs: 0,
+            baseUrl: server.url,
+          });
           const outcome = await client.scrape(corpus.url).catch((e: unknown) => e);
           if (c.error !== undefined) {
             expectKind(outcome, c.error);
@@ -418,10 +573,20 @@ describe("decompression conformance", () => {
 });
 
 describe("json_bodies conformance", () => {
-  for (const c of corpus.json_bodies as Array<{ name: string; body_hex: string; value?: unknown; error?: string }>) {
+  for (const c of corpus.json_bodies as Array<{
+    name: string;
+    body_hex: string;
+    value?: unknown;
+    error?: string;
+  }>) {
     it(c.name, async () => {
       const bytes = hex(c.body_hex);
-      const result = new ScrapeResult({ content: bytes, statusCode: 200, headers: {}, url: corpus.url });
+      const result = new ScrapeResult({
+        content: bytes,
+        statusCode: 200,
+        headers: {},
+        url: corpus.url,
+      });
       const f = mockFetch(() => ok(bytes, { headers: { "content-type": "application/json" } }));
       const client = new Client({ token: "TOK", retries: 0, fetchImpl: f });
       const plugin = await client.plugin("google/search").catch((e: unknown) => e);
@@ -450,20 +615,28 @@ const camel = (snake: string) => snake.replace(/_([a-z0-9])/g, (_, ch: string) =
 const jsonResponse = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 const VALID_ID = corpus.jobs.ids.find((c) => c.valid)!.id;
-const jobsClient = (f: ReturnType<typeof mockFetch>) => new Client({ token: "TOK", retries: 0, fetchImpl: f }).jobs;
+const jobsClient = (f: ReturnType<typeof mockFetch>) =>
+  new Client({ token: "TOK", retries: 0, fetchImpl: f }).jobs;
 
 describe("jobs conformance", () => {
-  for (const c of corpus.jobs.task_results as Array<{ name: string; json: unknown; expect: Record<string, unknown>;
-    absent?: string[]; content_bytes_error?: string }>) {
+  for (const c of corpus.jobs.task_results as Array<{
+    name: string;
+    json: unknown;
+    expect: Record<string, unknown>;
+    absent?: string[];
+    content_bytes_error?: string;
+  }>) {
     it(`task result ${c.name}`, async () => {
       const r = await jobsClient(mockFetch(() => jsonResponse(c.json))).result(VALID_ID, VALID_ID);
       const fields = r as unknown as Record<string, unknown>;
       for (const [key, want] of Object.entries(c.expect)) {
-        if (key === "content_bytes_hex") expect(Buffer.from(r.contentBytes()).toString("hex")).toBe(want);
+        if (key === "content_bytes_hex")
+          expect(Buffer.from(r.contentBytes()).toString("hex")).toBe(want);
         else expect(fields[camel(key)], key).toEqual(want);
       }
       for (const key of c.absent ?? []) expect(fields[camel(key)], key).toBeUndefined();
-      if (c.content_bytes_error !== undefined) expect(() => r.contentBytes()).toThrow(KINDS[c.content_bytes_error]!);
+      if (c.content_bytes_error !== undefined)
+        expect(() => r.contentBytes()).toThrow(KINDS[c.content_bytes_error]!);
     });
   }
 
@@ -471,7 +644,12 @@ describe("jobs conformance", () => {
     it(`id ${JSON.stringify(c.id).slice(0, 40)} valid=${c.valid}`, async () => {
       const f = mockFetch(() => jsonResponse({}));
       const jobs = jobsClient(f);
-      const calls = [jobs.status(c.id), jobs.result(c.id, VALID_ID), jobs.result(VALID_ID, c.id), jobs.cancel(c.id)];
+      const calls = [
+        jobs.status(c.id),
+        jobs.result(c.id, VALID_ID),
+        jobs.result(VALID_ID, c.id),
+        jobs.cancel(c.id),
+      ];
       if (c.valid) {
         await Promise.all(calls);
         expect(new URL(f.calls[0]!.url).pathname).toBe(`/api/v1/jobs/${c.id}`);
@@ -483,8 +661,14 @@ describe("jobs conformance", () => {
     });
   }
 
-  for (const c of corpus.jobs.errors as Array<{ name: string; status: number; body: string; kind: string;
-    message: string | null; billed?: boolean }>) {
+  for (const c of corpus.jobs.errors as Array<{
+    name: string;
+    status: number;
+    body: string;
+    kind: string;
+    message: string | null;
+    billed?: boolean;
+  }>) {
     it(`error ${c.name}`, async () => {
       const f = mockFetch(() => new Response(c.body === "" ? null : c.body, { status: c.status }));
       const err = await new Client({ token: "TOK", retries: 0, backoffMs: 0, fetchImpl: f }).jobs
@@ -500,11 +684,18 @@ describe("jobs conformance", () => {
   }
 
   for (const c of corpus.jobs.create as Array<{
-    name: string; targets: string[]; options: Record<string, unknown>; body?: string; error?: string;
+    name: string;
+    targets: string[];
+    options: Record<string, unknown>;
+    body?: string;
+    error?: string;
   }>) {
     it(`create ${c.name}`, async () => {
       const f = mockFetch(() => jsonResponse({ JobID: "j" }));
-      const call = new Client({ token: "TOKEN-123456", retries: 0, fetchImpl: f }).jobs.create(c.targets, c.options);
+      const call = new Client({ token: "TOKEN-123456", retries: 0, fetchImpl: f }).jobs.create(
+        c.targets,
+        c.options,
+      );
       if (c.error === "config") {
         await expect(call).rejects.toBeInstanceOf(SdoConfigError);
         expect(f.calls).toHaveLength(0);
@@ -519,12 +710,17 @@ describe("jobs conformance", () => {
     });
   }
 
-  for (const c of corpus.jobs.account as Array<{ name: string; json: unknown; expect: Record<string, unknown> }>) {
+  for (const c of corpus.jobs.account as Array<{
+    name: string;
+    json: unknown;
+    expect: Record<string, unknown>;
+  }>) {
     it(`account ${c.name}`, async () => {
       const f = mockFetch(() => jsonResponse(c.json));
       const account = (await jobsClient(f).me()) as unknown as Record<string, unknown>;
       expect(new URL(f.calls[0]!.url).pathname).toBe("/api/v1/me");
-      for (const [key, want] of Object.entries(c.expect)) expect(account[camel(key)], key).toEqual(want);
+      for (const [key, want] of Object.entries(c.expect))
+        expect(account[camel(key)], key).toEqual(want);
     });
   }
 
@@ -563,7 +759,9 @@ describe("client conformance", () => {
     expect(allowed).toBe(true);
     expect(() => new Client({ token: "TOK", baseUrl: url })).toThrow(SdoConfigError);
     expect(new Client({ token: "TOK", baseUrl: url, allowInsecureHttp: true }).baseUrl).toBe(url);
-    expect(new Client({ token: "TOK", asyncBaseUrl: url, allowInsecureHttp: true }).asyncBaseUrl).toBe(url);
+    expect(
+      new Client({ token: "TOK", asyncBaseUrl: url, allowInsecureHttp: true }).asyncBaseUrl,
+    ).toBe(url);
   });
 
   for (const c of corpus.client.timeouts) {
@@ -576,7 +774,9 @@ describe("client conformance", () => {
 
   for (const c of corpus.client.effective_timeouts) {
     it(`effective timeout ${c.client_seconds}s with gateway ${c.config_timeout_ms}ms`, () => {
-      expect(effectiveTimeoutMs(c.client_seconds * 1000, c.config_timeout_ms) / 1000).toBe(c.seconds);
+      expect(effectiveTimeoutMs(c.client_seconds * 1000, c.config_timeout_ms) / 1000).toBe(
+        c.seconds,
+      );
     });
   }
 
@@ -590,7 +790,9 @@ describe("client conformance", () => {
       const f = mockFetch(() => ok());
       await new Client({ token: c.value, fetchImpl: f }).scrape(corpus.url);
       // "" after trimming means "not given": the environment's token is used.
-      expect(rawQuery(f.calls[0]!.url).startsWith(`token=${c.token === "" ? "ENVTOKEN" : c.token}&`)).toBe(true);
+      expect(
+        rawQuery(f.calls[0]!.url).startsWith(`token=${c.token === "" ? "ENVTOKEN" : c.token}&`),
+      ).toBe(true);
     });
   }
 
@@ -660,7 +862,12 @@ describe("contract constants", () => {
     });
     expect(t.insecure_http_hosts).toEqual(["localhost", "127.0.0.1", "::1"]);
     expect(t.base_url_parts).toEqual(["scheme", "host", "port", "path_prefix"]);
-    expect(t.forbidden_headers).toEqual(["host", "content-length", "transfer-encoding", "connection"]);
+    expect(t.forbidden_headers).toEqual([
+      "host",
+      "content-length",
+      "transfer-encoding",
+      "connection",
+    ]);
     expect(t.content_codings).toEqual(["gzip", "x-gzip", "deflate", "br"]);
     expect(t.effective_timeout).toBe("max(client_timeout, config.timeout_ms / 1000 + margin)");
     expect(GATEWAY_TIMEOUT_MARGIN_MS).toBe(t.gateway_timeout_margin_seconds * 1000);
@@ -690,17 +897,31 @@ describe("contract constants", () => {
     // buildError implement.
     expect(e.target_origin).toBe("request_cost_positive");
     expect(e.billed).toBe("request_cost_else_billed_statuses");
-    expect(e.request_cost).toEqual({ values: 1, trim: " \t", digits: "ascii", max: MAX_REQUEST_COST });
+    expect(e.request_cost).toEqual({
+      values: 1,
+      trim: " \t",
+      digits: "ascii",
+      max: MAX_REQUEST_COST,
+    });
     expect(e.envelope_keys).toEqual(["message", "error"]);
-    expect(Object.keys(e.default_messages).sort()).toEqual(
-      ["api", "auth", "canceled", "concurrency", "gateway", "redirect", "validation"],
-    );
+    expect(Object.keys(e.default_messages).sort()).toEqual([
+      "api",
+      "auth",
+      "canceled",
+      "concurrency",
+      "gateway",
+      "redirect",
+      "validation",
+    ]);
   });
 
   it("environment variables", () => {
-    expect(Object.keys(contract.environment).sort()).toEqual(
-      ["SDO_ASYNC_BASE_URL", "SDO_BASE_URL", "SDO_TIMEOUT", "SDO_TOKEN"],
-    );
+    expect(Object.keys(contract.environment).sort()).toEqual([
+      "SDO_ASYNC_BASE_URL",
+      "SDO_BASE_URL",
+      "SDO_TIMEOUT",
+      "SDO_TOKEN",
+    ]);
   });
 
   it("user agent, routes, ids and redaction", async () => {
@@ -712,7 +933,11 @@ describe("contract constants", () => {
     expect(ROUTE_PATTERN.source).toBe(contract.plugin_route_pattern);
     expect(ID_PATTERN.source).toBe(corpus.jobs.id_pattern);
     expect(corpus.jobs.auth_header).toBe("X-Token");
-    expect(contract.redaction).toMatchObject({ mask: "***", literal_token: true, literal_min_length: 8 });
+    expect(contract.redaction).toMatchObject({
+      mask: "***",
+      literal_token: true,
+      literal_min_length: 8,
+    });
     expect(redactSecrets("x 12345678 y", "12345678")).toBe("x *** y");
     expect(redactSecrets("x 1234567 y", "1234567")).toBe("x 1234567 y");
   });

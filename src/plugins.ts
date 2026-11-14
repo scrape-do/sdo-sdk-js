@@ -55,7 +55,10 @@ function literal(key: string, value: unknown): string | undefined {
  * are refused: the token only comes from the client; so is a key outside
  * PARAM_NAME.
  */
-export function pluginQuery(token: string, params: Record<string, unknown>): Array<[string, string]> {
+export function pluginQuery(
+  token: string,
+  params: Record<string, unknown>,
+): Array<[string, string]> {
   if (params === null || typeof params !== "object" || Array.isArray(params)) {
     throw new SdoConfigError("Plugin parameters must be a plain object.");
   }
@@ -63,7 +66,9 @@ export function pluginQuery(token: string, params: Record<string, unknown>): Arr
   for (const key of Object.keys(params).sort(compareCodePoints)) {
     if (key === "") throw new SdoConfigError("Plugin parameter names cannot be empty.");
     if (key.toLowerCase() === "token") {
-      throw new SdoConfigError(`Plugin parameters cannot set the reserved key '${key}'; the token comes from the client.`);
+      throw new SdoConfigError(
+        `Plugin parameters cannot set the reserved key '${key}'; the token comes from the client.`,
+      );
     }
     if (!PARAM_NAME.test(key)) {
       throw new SdoConfigError(
@@ -73,7 +78,8 @@ export function pluginQuery(token: string, params: Record<string, unknown>): Arr
     }
     const value = params[key];
     for (const item of Array.isArray(value) ? value : [value]) {
-      if (Array.isArray(item)) throw new SdoConfigError(`Plugin parameter '${key}' cannot be a nested list.`);
+      if (Array.isArray(item))
+        throw new SdoConfigError(`Plugin parameter '${key}' cannot be a nested list.`);
       const v = literal(key, item);
       if (v !== undefined) pairs.push([key, v]);
     }
@@ -85,7 +91,9 @@ export function pluginQuery(token: string, params: Record<string, unknown>): Arr
  * The plugin's `timeout` param (ms) when it is sent once as a positive integer
  * (ASCII digits), else undefined.
  */
-export function pluginTimeoutMs(pairs: ReadonlyArray<readonly [string, string]>): number | undefined {
+export function pluginTimeoutMs(
+  pairs: ReadonlyArray<readonly [string, string]>,
+): number | undefined {
   const values = pairs.filter(([k]) => k === "timeout").map(([, v]) => v);
   if (values.length !== 1 || !/^[0-9]+$/.test(values[0]!)) return undefined;
   const ms = Number(values[0]);
@@ -101,7 +109,7 @@ export async function pluginResponse(
   params: Record<string, unknown>,
   signal?: AbortSignal,
 ): Promise<HttpResponse> {
-  const path = "/plugin/" + validateRoute(route);
+  const path = `/plugin/${validateRoute(route)}`;
   const pairs = pluginQuery(token, params);
   const url = `${baseUrl}${path}?${buildQuery(pairs)}`;
   return transport.send({
@@ -130,5 +138,8 @@ export async function callPlugin(
   params: Record<string, unknown>,
   signal?: AbortSignal,
 ): Promise<unknown> {
-  return pluginOutput(await pluginResponse(transport, baseUrl, token, route, params, signal), token);
+  return pluginOutput(
+    await pluginResponse(transport, baseUrl, token, route, params, signal),
+    token,
+  );
 }

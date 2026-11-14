@@ -4,6 +4,8 @@
 import { inspect } from "node:util";
 import { describe, expect, it, vi } from "vitest";
 import { Client } from "../src/client.js";
+import { resolveLabel, sniffEncoding } from "../src/decoding.js";
+import { contentCodings } from "../src/decompress.js";
 import {
   SdoApiError,
   SdoConfigError,
@@ -11,8 +13,6 @@ import {
   SdoResponseTooLargeError,
   SdoTimeoutError,
 } from "../src/errors.js";
-import { contentCodings } from "../src/decompress.js";
-import { resolveLabel, sniffEncoding } from "../src/decoding.js";
 import { parseRetryAfter, readCapped } from "../src/transport.js";
 import { VERSION } from "../src/version.js";
 import { header, mockFetch, stalledBody } from "./helpers.js";
@@ -23,14 +23,22 @@ const ENCODED = "SUPERSECRET%2FTOKEN%2B1";
 /** Everything a caller could plausibly log from a thrown error. */
 function allText(e: unknown): string {
   const err = e as Error & { body?: string };
-  return [inspect(err, { depth: 10 }), err.message, err.stack, err.body ?? "", JSON.stringify(err)].join(" ");
+  return [
+    inspect(err, { depth: 10 }),
+    err.message,
+    err.stack,
+    err.body ?? "",
+    JSON.stringify(err),
+  ].join(" ");
 }
 
 describe("token redaction", () => {
   it("keeps the token out of transport errors, their stack and their cause chain", async () => {
     const fetchImpl = mockFetch(() => {
       const inner = new Error(`connect ECONNREFUSED for ?token=${ENCODED}`);
-      throw new TypeError(`fetch failed: https://api.scrape.do/?token=${TOKEN}&url=x`, { cause: inner });
+      throw new TypeError(`fetch failed: https://api.scrape.do/?token=${TOKEN}&url=x`, {
+        cause: inner,
+      });
     });
     const client = new Client({ token: TOKEN, retries: 0, fetchImpl });
     const err = await client.scrape("https://e.com").catch((e) => e);
@@ -47,7 +55,9 @@ describe("token redaction", () => {
       Request: { token: TOKEN, headers: `X-Token: ${TOKEN}` },
     });
     const fetchImpl = mockFetch(() => new Response(body, { status: 401 }));
-    const err = await new Client({ token: TOKEN, retries: 0, fetchImpl }).scrape("https://e.com").catch((e) => e);
+    const err = await new Client({ token: TOKEN, retries: 0, fetchImpl })
+      .scrape("https://e.com")
+      .catch((e) => e);
     expect(err).toBeInstanceOf(SdoApiError);
     expect(err.message).toBe("Invalid token ***; see ?x=***");
     expect(allText(err)).not.toContain("SUPERSECRET");
@@ -80,7 +90,12 @@ describe("token redaction", () => {
 });
 
 describe("base URLs carry the token only over https", () => {
-  for (const baseUrl of ["http://api.scrape.do", "http://localhost.evil.com", "ftp://x", "api.scrape.do"]) {
+  for (const baseUrl of [
+    "http://api.scrape.do",
+    "http://localhost.evil.com",
+    "ftp://x",
+    "api.scrape.do",
+  ]) {
     it(`rejects ${baseUrl}`, () => {
       expect(() => new Client({ token: TOKEN, baseUrl })).toThrow(SdoConfigError);
       vi.stubEnv("SDO_ASYNC_BASE_URL", baseUrl);
@@ -95,7 +110,9 @@ describe("base URLs carry the token only over https", () => {
   });
 
   it("keeps a path prefix on both bases", async () => {
-    const f = mockFetch(() => new Response("{}", { headers: { "content-type": "application/json" } }));
+    const f = mockFetch(
+      () => new Response("{}", { headers: { "content-type": "application/json" } }),
+    );
     const client = new Client({
       token: TOKEN,
       baseUrl: "https://gw.test/prefix/",
@@ -118,7 +135,9 @@ describe("the async API never follows a redirect", () => {
     const f = mockFetch(
       () => new Response(null, { status: 302, headers: { location: "https://evil.test/steal" } }),
     );
-    const err = await new Client({ token: TOKEN, retries: 2, fetchImpl: f }).jobs.list().catch((e) => e);
+    const err = await new Client({ token: TOKEN, retries: 2, fetchImpl: f }).jobs
+      .list()
+      .catch((e) => e);
     expect(err).toBeInstanceOf(SdoApiError);
     expect(err.statusCode).toBe(302);
     expect(f.calls).toHaveLength(1);
@@ -142,13 +161,23 @@ describe("bounded reads on every path", () => {
 
   it("refuses a scrape body past the ceiling", async () => {
     const fetchImpl = mockFetch(() => new Response(big(), { status: 200 }));
-    const client = new Client({ token: TOKEN, retries: 0, maxResponseBytes: 1024 * 1024, fetchImpl });
+    const client = new Client({
+      token: TOKEN,
+      retries: 0,
+      maxResponseBytes: 1024 * 1024,
+      fetchImpl,
+    });
     await expect(client.scrape("https://e.com")).rejects.toBeInstanceOf(SdoResponseTooLargeError);
   });
 
   it("refuses an async job result past the ceiling", async () => {
     const fetchImpl = mockFetch(() => new Response(big(), { status: 200 }));
-    const client = new Client({ token: TOKEN, retries: 0, maxResponseBytes: 1024 * 1024, fetchImpl });
+    const client = new Client({
+      token: TOKEN,
+      retries: 0,
+      maxResponseBytes: 1024 * 1024,
+      fetchImpl,
+    });
     await expect(client.jobs.result("j", "t")).rejects.toBeInstanceOf(SdoResponseTooLargeError);
   });
 
@@ -161,7 +190,9 @@ describe("bounded reads on every path", () => {
       },
     });
     const f = mockFetch(() => new Response(body, { status: 500 }));
-    const err = await new Client({ token: TOKEN, retries: 0, fetchImpl: f }).scrape("https://e.com").catch((e) => e);
+    const err = await new Client({ token: TOKEN, retries: 0, fetchImpl: f })
+      .scrape("https://e.com")
+      .catch((e) => e);
     expect(err.statusCode).toBe(500);
     expect(err.body).toHaveLength(2048);
     expect(pulled).toBeLessThan(10);
@@ -170,7 +201,12 @@ describe("bounded reads on every path", () => {
   it("still returns a body under the ceiling", async () => {
     const payload = new TextEncoder().encode("<html>ok</html>");
     const fetchImpl = mockFetch(() => new Response(payload, { status: 200 }));
-    const client = new Client({ token: TOKEN, retries: 0, maxResponseBytes: 1024 * 1024, fetchImpl });
+    const client = new Client({
+      token: TOKEN,
+      retries: 0,
+      maxResponseBytes: 1024 * 1024,
+      fetchImpl,
+    });
     expect((await client.scrape("https://e.com")).bytes()).toEqual(payload);
   });
 
@@ -221,7 +257,13 @@ describe("connections are released", () => {
 
   it("cancels the body of a response that is retried", async () => {
     const { f, cancelled } = tracked(503);
-    await new Client({ token: TOKEN, retries: 2, backoffMs: 0, maxResponseBytes: 4096, fetchImpl: f })
+    await new Client({
+      token: TOKEN,
+      retries: 2,
+      backoffMs: 0,
+      maxResponseBytes: 4096,
+      fetchImpl: f,
+    })
       .scrape("https://e.com")
       .catch(() => undefined);
     expect(f.calls).toHaveLength(3);
@@ -237,7 +279,16 @@ describe("connections are released", () => {
 });
 
 describe("plugin route validation", () => {
-  for (const route of ["../", "..%2f..", "x#", "x?token=evil", "a/../b", "Google/Shopping", "", "/google/x"]) {
+  for (const route of [
+    "../",
+    "..%2f..",
+    "x#",
+    "x?token=evil",
+    "a/../b",
+    "Google/Shopping",
+    "",
+    "/google/x",
+  ]) {
     it(`rejects ${JSON.stringify(route)} before any request`, async () => {
       const fetchImpl = mockFetch(() => new Response("{}", { status: 200 }));
       const client = new Client({ token: TOKEN, retries: 0, fetchImpl });
@@ -263,7 +314,9 @@ describe("parameter names", () => {
     it(`rejects plugin parameter ${JSON.stringify(key)} before any request`, async () => {
       const fetchImpl = mockFetch(() => new Response("{}"));
       const client = new Client({ token: TOKEN, retries: 0, fetchImpl });
-      await expect(client.plugin("google/search", { [key]: "1" })).rejects.toThrow(/is not a valid parameter name/);
+      await expect(client.plugin("google/search", { [key]: "1" })).rejects.toThrow(
+        /is not a valid parameter name/,
+      );
       expect(fetchImpl.calls).toHaveLength(0);
     });
   }
@@ -301,7 +354,9 @@ describe("target-controlled headers are trimmed in linear time", () => {
     expect(parseRetryAfter(` \t7${pad}`)).toBe(7);
     expect(contentCodings(` gzip${pad}, \tbr `)).toEqual(["br", "gzip"]);
     expect(resolveLabel(`${pad}latin1\f`)).toBe("windows-1252");
-    expect(sniffEncoding(new Uint8Array(), `text/plain; charset=latin1${pad}`).encoding).toBe("windows-1252");
+    expect(sniffEncoding(new Uint8Array(), `text/plain; charset=latin1${pad}`).encoding).toBe(
+      "windows-1252",
+    );
   });
 });
 

@@ -28,7 +28,10 @@ const LITERAL_MIN_LENGTH = 8;
 // `\s` would also stop at U+00A0 or U+3000.
 const SHAPES: ReadonlyArray<readonly [RegExp, string]> = [
   [/\b((?:token|api[-_]?key|access[-_]?token)=)[^&\t\n\v\f\r "']+/gi, `$1${MASK}`],
-  [/("(?:token|api[-_]?key|access[-_]?token)"[\t\n\v\f\r ]*:[\t\n\v\f\r ]*")[^"]*(")/gi, `$1${MASK}$2`],
+  [
+    /("(?:token|api[-_]?key|access[-_]?token)"[\t\n\v\f\r ]*:[\t\n\v\f\r ]*")[^"]*(")/gi,
+    `$1${MASK}$2`,
+  ],
   [/\b(x-token[\t\n\v\f\r ]*:[\t\n\v\f\r ]*)[^\t\n\v\f\r ,;]+/gi, `$1${MASK}`],
 ];
 
@@ -72,7 +75,8 @@ export function sanitizeCause(cause: unknown, token?: string, depth = 0): Error 
   copy.stack = cause.stack === undefined ? undefined : redactSecrets(cause.stack, token);
   const code = (cause as { code?: unknown }).code;
   if (typeof code === "string") Object.assign(copy, { code: redactSecrets(code, token) });
-  if (cause.cause !== undefined && depth < 3) copy.cause = sanitizeCause(cause.cause, token, depth + 1);
+  if (cause.cause !== undefined && depth < 3)
+    copy.cause = sanitizeCause(cause.cause, token, depth + 1);
   return copy;
 }
 

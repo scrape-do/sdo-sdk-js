@@ -5,23 +5,23 @@
 import zlib from "node:zlib";
 import type { CheerioAPI } from "cheerio";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import * as sdo from "../src/index.js";
 import { Client } from "../src/client.js";
 import { decodeBody } from "../src/decompress.js";
 import {
+  asyncEnvelopeMessage,
+  redactSecrets,
   SdoAbortError,
   SdoApiError,
   SdoConnectionError,
   SdoGatewayError,
   SdoResponseTooLargeError,
   SdoTimeoutError,
-  asyncEnvelopeMessage,
-  redactSecrets,
   sanitizeCause,
   syncEnvelopeMessage,
 } from "../src/errors.js";
-import { ScrapeResult } from "../src/response.js";
 import { nodeSend } from "../src/http.js";
+import * as sdo from "../src/index.js";
+import { ScrapeResult } from "../src/response.js";
 import { readCapped } from "../src/transport.js";
 import { mockFetch } from "./helpers.js";
 import { withServer } from "./server.js";
@@ -38,10 +38,24 @@ afterEach(() => {
 describe("package entry point", () => {
   it("exports the documented public surface", () => {
     for (const name of [
-      "Client", "ScrapeConfig", "ScrapeResult", "TaskResult", "VERSION", "redactSecrets",
-      "SdoError", "SdoConfigError", "SdoTransportError", "SdoConnectionError", "SdoTimeoutError",
-      "SdoResponseTooLargeError", "SdoAbortError", "SdoApiError", "SdoAuthError", "SdoValidationError",
-      "SdoConcurrencyError", "SdoGatewayError",
+      "Client",
+      "ScrapeConfig",
+      "ScrapeResult",
+      "TaskResult",
+      "VERSION",
+      "redactSecrets",
+      "SdoError",
+      "SdoConfigError",
+      "SdoTransportError",
+      "SdoConnectionError",
+      "SdoTimeoutError",
+      "SdoResponseTooLargeError",
+      "SdoAbortError",
+      "SdoApiError",
+      "SdoAuthError",
+      "SdoValidationError",
+      "SdoConcurrencyError",
+      "SdoGatewayError",
     ]) {
       expect(sdo, name).toHaveProperty(name);
     }
@@ -97,8 +111,15 @@ describe("client option resolution", () => {
     await withServer(
       (req, res) => void res.end(req.url.startsWith("/api/v1/") ? '{"Jobs":[]}' : "from node"),
       async (server) => {
-        const c = new Client({ token: "t", retries: 0, baseUrl: server.url, asyncBaseUrl: server.url });
-        expect(new TextDecoder().decode((await c.scrape("https://e.com")).bytes())).toBe("from node");
+        const c = new Client({
+          token: "t",
+          retries: 0,
+          baseUrl: server.url,
+          asyncBaseUrl: server.url,
+        });
+        expect(new TextDecoder().decode((await c.scrape("https://e.com")).bytes())).toBe(
+          "from node",
+        );
         expect((await c.jobs.list()).jobs).toEqual([]); // jobs use the same transport
         expect(server.requests).toHaveLength(2);
       },
@@ -112,7 +133,10 @@ describe("transport failure paths", () => {
     let n = 0;
     const f = mockFetch(() => {
       n += 1;
-      if (n === 1) throw new TypeError("fetch failed", { cause: Object.assign(new Error("refused"), { code: "ECONNREFUSED" }) });
+      if (n === 1)
+        throw new TypeError("fetch failed", {
+          cause: Object.assign(new Error("refused"), { code: "ECONNREFUSED" }),
+        });
       return new Response("ok");
     });
     const c = new Client({ token: "t", retries: 1, backoffMs: 0, fetchImpl: f });
@@ -122,7 +146,9 @@ describe("transport failure paths", () => {
 
   it("does not retry a fetch failure that may have reached the server", async () => {
     const f = mockFetch(() => {
-      throw new TypeError("fetch failed", { cause: Object.assign(new Error("reset"), { code: "ECONNRESET" }) });
+      throw new TypeError("fetch failed", {
+        cause: Object.assign(new Error("reset"), { code: "ECONNRESET" }),
+      });
     });
     const c = new Client({ token: "t", retries: 2, backoffMs: 0, fetchImpl: f });
     await expect(c.scrape("https://e.com")).rejects.toThrow("Connection failed: fetch failed");
@@ -131,7 +157,9 @@ describe("transport failure paths", () => {
 
   it("maps an unknown 4xx to a generic SdoApiError", async () => {
     const f = mockFetch(() => new Response(null, { status: 418 }));
-    const err = await new Client({ token: "t", retries: 0, fetchImpl: f }).scrape("https://e.com").catch((e) => e);
+    const err = await new Client({ token: "t", retries: 0, fetchImpl: f })
+      .scrape("https://e.com")
+      .catch((e) => e);
     expect(err).toBeInstanceOf(SdoApiError);
     expect(err.constructor).toBe(SdoApiError);
     expect(err.message).toContain("HTTP 418");
@@ -139,16 +167,26 @@ describe("transport failure paths", () => {
 
   it("ignores a non-numeric Retry-After and falls back to backoff", async () => {
     const f = mockFetch((_u, _i, i) =>
-      i === 0 ? new Response(null, { status: 503, headers: { "retry-after": "soon" } }) : new Response("ok"),
+      i === 0
+        ? new Response(null, { status: 503, headers: { "retry-after": "soon" } })
+        : new Response("ok"),
     );
-    const res = await new Client({ token: "t", retries: 1, backoffMs: 0, fetchImpl: f }).scrape("https://e.com");
+    const res = await new Client({ token: "t", retries: 1, backoffMs: 0, fetchImpl: f }).scrape(
+      "https://e.com",
+    );
     expect(res.statusCode).toBe(200);
   });
 
   it("keeps the error body undefined when it cannot be read", async () => {
-    const body = new ReadableStream({ start(c) { c.error(new Error("socket reset")); } });
+    const body = new ReadableStream({
+      start(c) {
+        c.error(new Error("socket reset"));
+      },
+    });
     const f = mockFetch(() => new Response(body, { status: 400 }));
-    const err = await new Client({ token: "t", retries: 0, fetchImpl: f }).scrape("https://e.com").catch((e) => e);
+    const err = await new Client({ token: "t", retries: 0, fetchImpl: f })
+      .scrape("https://e.com")
+      .catch((e) => e);
     expect(err.statusCode).toBe(400);
     expect(err.body).toBeUndefined();
   });
@@ -164,7 +202,9 @@ describe("transport failure paths", () => {
   it("does not retry a fetch that resolves to something other than a Response", async () => {
     // The failure comes after the call returned, so the request may have left.
     const f = mockFetch(() => undefined as unknown as Response);
-    const err = await new Client({ token: "t", retries: 2, backoffMs: 0, fetchImpl: f }).scrape("https://e.com").catch((e) => e);
+    const err = await new Client({ token: "t", retries: 2, backoffMs: 0, fetchImpl: f })
+      .scrape("https://e.com")
+      .catch((e) => e);
     expect(err).toBeInstanceOf(SdoConnectionError);
     expect(f.calls).toHaveLength(1);
   });
@@ -177,7 +217,9 @@ describe("transport failure paths", () => {
       return new Response(null, { status: 503 });
     });
     const c = new Client({ token: "t", retries: 1, backoffMs: 60_000, fetchImpl: f });
-    await expect(c.scrape("https://e.com", { signal: ac.signal })).rejects.toBeInstanceOf(SdoAbortError);
+    await expect(c.scrape("https://e.com", { signal: ac.signal })).rejects.toBeInstanceOf(
+      SdoAbortError,
+    );
     expect(f.calls).toHaveLength(1);
   });
 
@@ -203,11 +245,16 @@ describe("transport failure paths", () => {
     expect(new TextDecoder().decode(out.bytes)).toBe("hello, chunked world");
   });
 
-  it("node:http requests \"/\" for a URL with no path", () =>
+  it('node:http requests "/" for a URL with no path', () =>
     withServer(
       (_req, res) => void res.end("ok"),
       async (server) => {
-        const ex = await nodeSend({ method: "GET", url: server.url, headers: {}, signal: new AbortController().signal });
+        const ex = await nodeSend({
+          method: "GET",
+          url: server.url,
+          headers: {},
+          signal: new AbortController().signal,
+        });
         for await (const _ of ex.body);
         expect(ex.status).toBe(200);
         expect(server.requests[0]!.url).toBe("/");
@@ -254,7 +301,12 @@ describe("error envelope parsing", () => {
 
 describe("response edge cases", () => {
   const make = (headers: Record<string, string>, body = "x") =>
-    new ScrapeResult({ content: new TextEncoder().encode(body), statusCode: 200, headers, url: "u" });
+    new ScrapeResult({
+      content: new TextEncoder().encode(body),
+      statusCode: 200,
+      headers,
+      url: "u",
+    });
 
   it("rejects malformed metadata values", () => {
     const r = make({
@@ -271,7 +323,10 @@ describe("response edge cases", () => {
   });
 
   it("builds a cheerio selector over the decoded text", async () => {
-    const $ = await make({ "content-type": "text/html" }, "<p class='a'>hi</p>").selector<CheerioAPI>();
+    const $ = await make(
+      { "content-type": "text/html" },
+      "<p class='a'>hi</p>",
+    ).selector<CheerioAPI>();
     expect($("p.a").text()).toBe("hi");
   });
 });
@@ -282,7 +337,11 @@ describe("async job responses with fields omitted", () => {
       token: "t",
       retries: 0,
       fetchImpl: mockFetch(
-        () => new Response(JSON.stringify(payload), { status, headers: { "content-type": "application/json" } }),
+        () =>
+          new Response(JSON.stringify(payload), {
+            status,
+            headers: { "content-type": "application/json" },
+          }),
       ),
     }).jobs;
 
@@ -296,7 +355,9 @@ describe("async job responses with fields omitted", () => {
   });
 
   it("surfaces a failed cancel as a typed error with the envelope message", async () => {
-    const err = await jobsClient({ Error: "job not found", Code: 404 }, 404).cancel("j").catch((e) => e);
+    const err = await jobsClient({ Error: "job not found", Code: 404 }, 404)
+      .cancel("j")
+      .catch((e) => e);
     expect(err).toBeInstanceOf(SdoApiError);
     expect(err.message).toBe("job not found");
   });
@@ -311,8 +372,12 @@ describe("plugin edge cases", () => {
   });
 
   it("returns a pluginResult without a content type as raw bytes", async () => {
-    const f = mockFetch(() => new Response(new Uint8Array([1, 2, 3]), { headers: { "scrape.do-request-cost": "2" } }));
-    const res = await new Client({ token: "t", retries: 0, fetchImpl: f }).pluginResult("google/shopping");
+    const f = mockFetch(
+      () => new Response(new Uint8Array([1, 2, 3]), { headers: { "scrape.do-request-cost": "2" } }),
+    );
+    const res = await new Client({ token: "t", retries: 0, fetchImpl: f }).pluginResult(
+      "google/shopping",
+    );
     expect(res.contentType).toBeUndefined();
     expect(res.bytes()).toEqual(new Uint8Array([1, 2, 3]));
     expect(res.cost).toBe(2);
@@ -330,16 +395,28 @@ describe("plugin edge cases", () => {
 
 describe("remaining small contracts", () => {
   it("treats null ScrapeConfig options as none", () => {
-    expect(new sdo.ScrapeConfig("https://e.com", null as never).toParams()).toEqual([["url", "https://e.com"]]);
+    expect(new sdo.ScrapeConfig("https://e.com", null as never).toParams()).toEqual([
+      ["url", "https://e.com"],
+    ]);
   });
 
   it("skips null and undefined extraParams values", () => {
-    const params = new sdo.ScrapeConfig("https://e.com", { extraParams: { a: null, b: undefined, c: "1" } }).toParams();
-    expect(params).toEqual([["url", "https://e.com"], ["c", "1"]]);
+    const params = new sdo.ScrapeConfig("https://e.com", {
+      extraParams: { a: null, b: undefined, c: "1" },
+    }).toParams();
+    expect(params).toEqual([
+      ["url", "https://e.com"],
+      ["c", "1"],
+    ]);
   });
 
   it("decodes a body with no content type as UTF-8", () => {
-    const r = new ScrapeResult({ content: new TextEncoder().encode("héllo"), statusCode: 200, headers: {}, url: "u" });
+    const r = new ScrapeResult({
+      content: new TextEncoder().encode("héllo"),
+      statusCode: 200,
+      headers: {},
+      url: "u",
+    });
     expect(r.text).toBe("héllo");
   });
 
@@ -382,7 +459,10 @@ describe("redaction helpers", () => {
   it("copies a cause without the token, keeping its name, code and a bounded chain", () => {
     const deep = new Error("level 4 TOKEN-12345");
     let chain: Error = deep;
-    for (let i = 3; i >= 0; i--) chain = Object.assign(new Error(`level ${i} TOKEN-12345`, { cause: chain }), { code: `E${i}` });
+    for (let i = 3; i >= 0; i--)
+      chain = Object.assign(new Error(`level ${i} TOKEN-12345`, { cause: chain }), {
+        code: `E${i}`,
+      });
     const copy = sanitizeCause(chain, "TOKEN-12345");
     expect(copy.message).toBe("level 0 ***");
     expect((copy as Error & { code?: string }).code).toBe("E0");

@@ -24,9 +24,9 @@ const ASCII_WS = "\t\n\f\r ";
 // Node releases decode the latin1 family as ISO-8859-1, and every label in that
 // family (iso-8859-1, latin1, us-ascii, ...) means windows-1252 in WHATWG.
 const CP1252_HIGH = [
-  0x20ac, 0x81, 0x201a, 0x192, 0x201e, 0x2026, 0x2020, 0x2021, 0x2c6, 0x2030, 0x160, 0x2039, 0x152, 0x8d, 0x17d,
-  0x8f, 0x90, 0x2018, 0x2019, 0x201c, 0x201d, 0x2022, 0x2013, 0x2014, 0x2dc, 0x2122, 0x161, 0x203a, 0x153, 0x9d,
-  0x17e, 0x178,
+  0x20ac, 0x81, 0x201a, 0x192, 0x201e, 0x2026, 0x2020, 0x2021, 0x2c6, 0x2030, 0x160, 0x2039, 0x152,
+  0x8d, 0x17d, 0x8f, 0x90, 0x2018, 0x2019, 0x201c, 0x201d, 0x2022, 0x2013, 0x2014, 0x2dc, 0x2122,
+  0x161, 0x203a, 0x153, 0x9d, 0x17e, 0x178,
 ];
 
 // Node 22's ICU tables differ from WHATWG at these byte positions (Node 24's
@@ -89,8 +89,10 @@ export function resolveLabel(label: string): string | undefined {
 }
 
 function decodeWith(encoding: string, bytes: Uint8Array): string {
-  if (encoding === "windows-1252") return mapBytes(bytes, (b) => (b >= 0x80 && b < 0xa0 ? CP1252_HIGH[b - 0x80]! : b));
-  if (encoding === "x-user-defined") return mapBytes(bytes, (b) => (b < 0x80 ? b : 0xf780 + b - 0x80));
+  if (encoding === "windows-1252")
+    return mapBytes(bytes, (b) => (b >= 0x80 && b < 0xa0 ? CP1252_HIGH[b - 0x80]! : b));
+  if (encoding === "x-user-defined")
+    return mapBytes(bytes, (b) => (b < 0x80 ? b : 0xf780 + b - 0x80));
   const patches = SINGLE_BYTE_PATCHES[encoding];
   if (patches !== undefined) {
     const table = singleByteTable(encoding, patches);
@@ -155,13 +157,15 @@ function parseContentType(header: string | undefined): ContentType {
       pos = end;
       if (param === "") continue;
     }
-    if (name === "charset" && out.charset === undefined && PARAM_VALUE.test(param)) out.charset = param;
+    if (name === "charset" && out.charset === undefined && PARAM_VALUE.test(param))
+      out.charset = param;
   }
   return out;
 }
 
 const SPACE = new Set([0x09, 0x0a, 0x0c, 0x0d, 0x20]);
-const isAlpha = (b: number | undefined): boolean => b !== undefined && ((b >= 0x41 && b <= 0x5a) || (b >= 0x61 && b <= 0x7a));
+const isAlpha = (b: number | undefined): boolean =>
+  b !== undefined && ((b >= 0x41 && b <= 0x5a) || (b >= 0x61 && b <= 0x7a));
 const lower = (b: number): string => String.fromCharCode(b >= 0x41 && b <= 0x5a ? b + 0x20 : b);
 
 /**
@@ -201,7 +205,7 @@ class Prescan {
     if (this.pos >= b.length || b[this.pos] === 0x3e) return undefined;
     let name = "";
     let value = "";
-    for (;; this.pos++) {
+    for (; ; this.pos++) {
       const c = b[this.pos];
       if (c === undefined) return undefined;
       if (c === 0x3d && name !== "") break;
@@ -227,7 +231,7 @@ class Prescan {
         value += lower(c);
       }
     }
-    for (;; this.pos++) {
+    for (; ; this.pos++) {
       const c = b[this.pos];
       if (c === undefined) return undefined;
       if (SPACE.has(c) || c === 0x3e) return { name, value };
@@ -258,7 +262,13 @@ class Prescan {
         needPragma = false;
       }
     }
-    if (this.pos >= this.#b.length || needPragma === undefined || (needPragma && !gotPragma) || !charset) return undefined;
+    if (
+      this.pos >= this.#b.length ||
+      needPragma === undefined ||
+      (needPragma && !gotPragma) ||
+      !charset
+    )
+      return undefined;
     // A page cannot declare itself UTF-16 from inside its own ASCII-compatible
     // bytes, and x-user-defined means windows-1252 here.
     if (charset === "utf-16le" || charset === "utf-16be") return "utf-8";
@@ -272,11 +282,17 @@ class Prescan {
         const close = this.#find("-->", this.pos + 4);
         if (close < 0) return undefined;
         this.pos = close + 2;
-      } else if (this.#at("<meta", true) && (SPACE.has(b[this.pos + 5]!) || b[this.pos + 5] === 0x2f)) {
+      } else if (
+        this.#at("<meta", true) &&
+        (SPACE.has(b[this.pos + 5]!) || b[this.pos + 5] === 0x2f)
+      ) {
         this.pos += 5;
         const found = this.#meta();
         if (found !== undefined) return found;
-      } else if (b[this.pos] === 0x3c && (isAlpha(b[this.pos + 1]) || (b[this.pos + 1] === 0x2f && isAlpha(b[this.pos + 2])))) {
+      } else if (
+        b[this.pos] === 0x3c &&
+        (isAlpha(b[this.pos + 1]) || (b[this.pos + 1] === 0x2f && isAlpha(b[this.pos + 2])))
+      ) {
         while (this.pos < b.length && !SPACE.has(b[this.pos]!) && b[this.pos] !== 0x3e) this.pos++;
         while (this.#attribute() !== undefined);
       } else if (this.#at("<!") || this.#at("</") || this.#at("<?")) {
@@ -321,15 +337,20 @@ function sniffMeta(bytes: Uint8Array): string | undefined {
 }
 
 /** The encoding the ladder picks, and how many BOM bytes to skip. */
-export function sniffEncoding(bytes: Uint8Array, contentType?: string): { encoding: string; bomLength: number } {
-  if (bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf) return { encoding: "utf-8", bomLength: 3 };
+export function sniffEncoding(
+  bytes: Uint8Array,
+  contentType?: string,
+): { encoding: string; bomLength: number } {
+  if (bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf)
+    return { encoding: "utf-8", bomLength: 3 };
   if (bytes[0] === 0xfe && bytes[1] === 0xff) return { encoding: "utf-16be", bomLength: 2 };
   if (bytes[0] === 0xff && bytes[1] === 0xfe) return { encoding: "utf-16le", bomLength: 2 };
 
   const ct = parseContentType(contentType);
   const labelled = ct.charset === undefined ? undefined : resolveLabel(ct.charset);
   if (labelled !== undefined) return { encoding: labelled, bomLength: 0 };
-  if (ct.mime.endsWith("/json") || ct.mime.endsWith("+json")) return { encoding: "utf-8", bomLength: 0 };
+  if (ct.mime.endsWith("/json") || ct.mime.endsWith("+json"))
+    return { encoding: "utf-8", bomLength: 0 };
   if (HTML_TYPES.has(ct.mime)) {
     const sniffed = sniffMeta(bytes);
     if (sniffed !== undefined) return { encoding: sniffed, bomLength: 0 };

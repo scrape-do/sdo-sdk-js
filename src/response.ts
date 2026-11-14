@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // ScrapeResult — the body is already decompressed by the transport.
 import { decodeText } from "./decoding.js";
-import { sanitizeCause, SdoConfigError } from "./errors.js";
+import { SdoConfigError, sanitizeCause } from "./errors.js";
 import { parseRequestCost } from "./headers.js";
 import { parseJsonBody } from "./json.js";
 
@@ -28,10 +28,13 @@ function collectHeaders(headers: ScrapeResultInit["headers"]): Map<string, strin
   if (headers instanceof Headers) {
     // fetch joins repeated headers with ", ", which is lossy for Set-Cookie
     // (cookie dates contain commas); getSetCookie keeps them apart.
-    headers.forEach((v, k) => k !== "set-cookie" && add(k, v));
+    headers.forEach((v, k) => {
+      if (k !== "set-cookie") add(k, v);
+    });
     for (const cookie of headers.getSetCookie()) add("set-cookie", cookie);
   } else {
-    for (const [k, v] of Object.entries(headers)) for (const one of Array.isArray(v) ? v : [v]) add(k, one);
+    for (const [k, v] of Object.entries(headers))
+      for (const one of Array.isArray(v) ? v : [v]) add(k, one);
   }
   return values;
 }
@@ -138,9 +141,12 @@ export class ScrapeResult {
     try {
       cheerio = (await import("cheerio")) as { load(html: string): unknown };
     } catch (e) {
-      throw new SdoConfigError("selector() needs the optional peer dependency 'cheerio': npm install cheerio", {
-        cause: sanitizeCause(e),
-      });
+      throw new SdoConfigError(
+        "selector() needs the optional peer dependency 'cheerio': npm install cheerio",
+        {
+          cause: sanitizeCause(e),
+        },
+      );
     }
     return cheerio.load(this.text) as T;
   }

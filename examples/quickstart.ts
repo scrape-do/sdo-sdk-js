@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
-// Minimal quickstart. Set SDO_TOKEN in your environment first.
+// Minimal quickstart. Set SDO_TOKEN in your environment first. From a clone,
+// after `npm install` (tsx is a pinned devDependency):
 //
 //     export SDO_TOKEN=your_token
 //     npx tsx examples/quickstart.ts
@@ -8,7 +9,7 @@
 import { Client } from "../src/index.js";
 
 const client = new Client(); // reads SDO_TOKEN
-const result = await client.scrape("https://httpbin.org/anything");
+const result = await client.scrape("https://example.com");
 console.log("status:", result.statusCode);
 console.log("cost:", result.cost);
 console.log("body:", result.text.slice(0, 200));

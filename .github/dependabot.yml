@@ -11,6 +11,10 @@ updates:
     cooldown:
       default-days: 7
     open-pull-requests-limit: 5
+    commit-message:
+      prefix: chore
+      include: scope
+    labels: ["dependencies"]
     groups:
       # vitest and @vitest/coverage-v8 are pinned to the exact same version;
       # either one bumped alone fails `npm ci` with ERESOLVE.
@@ -34,6 +38,10 @@ updates:
     cooldown:
       default-days: 7
     open-pull-requests-limit: 10
+    commit-message:
+      prefix: chore
+      include: scope
+    labels: ["dependencies"]
     groups:
       github-actions:
         patterns: ["*"]

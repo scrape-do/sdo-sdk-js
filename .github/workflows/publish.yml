@@ -4,8 +4,8 @@
 #
 # The build job refuses a tag that does not match package.json and
 # src/version.ts, or that is not on main. The publish job skips (with a notice)
-# a version that is already on npm, which is the case for the first version,
-# published by hand to bootstrap trusted publishing.
+# a version that is already on npm, so re-running a release that already
+# uploaded does not fail.
 #
 # Two channels, chosen by the tag (trunk-based: every tag is on main):
 #   vX.Y.Z-rc.N -> npm dist-tag `next`   (environment `prerelease`)
@@ -72,6 +72,7 @@ jobs:
           path: |
             dist/
             package.json
+            CHANGELOG.md
             README.md
             LICENSE
             NOTICE
@@ -105,7 +106,7 @@ jobs:
         run: |
           version="$(node -p 'require("./package.json").version')"
           if npm view "@scrape-do/sdk@${version}" version --json >/dev/null 2>&1; then
-            echo "::notice::@scrape-do/sdk@${version} is already on npm (the hand-published bootstrap version); nothing to publish."
+            echo "::notice::@scrape-do/sdk@${version} is already on npm; nothing to publish."
             echo "published=true" >> "$GITHUB_OUTPUT"
           else
             echo "published=false" >> "$GITHUB_OUTPUT"

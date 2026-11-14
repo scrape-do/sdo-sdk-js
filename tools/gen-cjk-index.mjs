@@ -59,7 +59,8 @@ function encode(file) {
   const text = readFileSync(join(dir, file), "utf8");
   const identifier = /^# Identifier: ([0-9a-f]+)$/m.exec(text)?.[1];
   const date = /^# Date: (\S+)$/m.exec(text)?.[1];
-  if (!identifier || !date) throw new Error(`${file}: no Identifier/Date header; is it a WHATWG index file?`);
+  if (!identifier || !date)
+    throw new Error(`${file}: no Identifier/Date header; is it a WHATWG index file?`);
   const entries = [];
   for (const line of text.split("\n")) {
     const m = /^\s*(\d+)\t0x([0-9A-F]+)\t/.exec(line);
@@ -93,9 +94,14 @@ const body = [];
 for (const { name, file } of TABLES) {
   const t = encode(file);
   lines.push(`//   ${file}: ${t.count} mappings, Identifier ${t.identifier}, Date ${t.date}`);
-  body.push("", `export const ${name}_SIZE = ${t.size};`, `export const ${name} =`, `  "${t.data}";`);
+  body.push(
+    "",
+    `export const ${name}_SIZE = ${t.size};`,
+    `export const ${name} =`,
+    `  "${t.data}";`,
+  );
 }
-const out = [...lines, ...body].join("\n") + "\n";
+const out = `${[...lines, ...body].join("\n")}\n`;
 
 if (flag === "--check") {
   const current = readFileSync(OUT, "utf8");

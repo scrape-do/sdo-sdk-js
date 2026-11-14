@@ -5,7 +5,12 @@
 // PascalCase wire response is parsed into the typed object.
 import { describe, expect, it } from "vitest";
 import { Client } from "../src/client.js";
-import { SdoConfigError, SdoTimeoutError, SdoTransportError, SdoValidationError } from "../src/errors.js";
+import {
+  SdoConfigError,
+  SdoTimeoutError,
+  SdoTransportError,
+  SdoValidationError,
+} from "../src/errors.js";
 import { TaskResult } from "../src/jobs.js";
 import { bodyText, header, mockFetch } from "./helpers.js";
 
@@ -39,7 +44,9 @@ describe("AsyncJobs.create", () => {
     expect(header(call.init, "X-Token")).toBe("tok");
     expect(header(call.init, "Content-Type")).toBe("application/json");
     // Canonical JSON: keys sorted, compact.
-    expect(bodyText(call.init)).toBe('{"GeoCode":"us","Super":true,"Targets":["https://a.com","https://b.com"]}');
+    expect(bodyText(call.init)).toBe(
+      '{"GeoCode":"us","Super":true,"Targets":["https://a.com","https://b.com"]}',
+    );
   });
 
   it("defaults options to an empty object (body is just Targets)", async () => {
@@ -202,7 +209,9 @@ describe("AsyncJobs timeout wiring", () => {
     const f = mockFetch(
       (_u, init) =>
         new Promise<Response>((_resolve, reject) => {
-          (init!.signal as AbortSignal).addEventListener("abort", () => reject(new Error("aborted")));
+          (init!.signal as AbortSignal).addEventListener("abort", () =>
+            reject(new Error("aborted")),
+          );
         }),
     );
     await expect(client(f, 20).jobs.status("job-1")).rejects.toBeInstanceOf(SdoTimeoutError);
@@ -215,8 +224,12 @@ describe("AsyncJobs input and response shapes", () => {
     const jobs = client(f).jobs;
     await expect(jobs.create("https://a.com" as never)).rejects.toBeInstanceOf(SdoConfigError);
     await expect(jobs.create([1] as never)).rejects.toBeInstanceOf(SdoConfigError);
-    await expect(jobs.create(["https://a.com"], [] as never)).rejects.toBeInstanceOf(SdoConfigError);
-    await expect(jobs.create(["https://a.com"], { targets: [] })).rejects.toBeInstanceOf(SdoConfigError);
+    await expect(jobs.create(["https://a.com"], [] as never)).rejects.toBeInstanceOf(
+      SdoConfigError,
+    );
+    await expect(jobs.create(["https://a.com"], { targets: [] })).rejects.toBeInstanceOf(
+      SdoConfigError,
+    );
     expect(f.calls).toHaveLength(0);
   });
 
@@ -226,7 +239,9 @@ describe("AsyncJobs input and response shapes", () => {
   });
 
   it("reads absent or mistyped fields as absent (lists empty, flags false)", async () => {
-    const f = mockFetch(() => json({ Jobs: [{ JobID: 5, Tasks: [null, { TaskID: "t" }] }, "junk"] }));
+    const f = mockFetch(() =>
+      json({ Jobs: [{ JobID: 5, Tasks: [null, { TaskID: "t" }] }, "junk"] }),
+    );
     const [only, ...rest] = (await client(f).jobs.list()).jobs;
     expect(rest).toEqual([]);
     expect(only).toEqual({
@@ -250,7 +265,9 @@ describe("AsyncJobs input and response shapes", () => {
 
   it("never marks an async API error as billed", async () => {
     const f = mockFetch(() => json({ Error: "Job not found", Code: 404 }, 404));
-    const err = await client(f).jobs.status("j").catch((e) => e);
+    const err = await client(f)
+      .jobs.status("j")
+      .catch((e) => e);
     expect(err.billed).toBe(false);
     expect(err.statusCode).toBe(404);
   });
@@ -271,8 +288,8 @@ describe("TaskResult.contentBytes", () => {
     // 8 MiB of base64: a grouped-quantifier pattern threw RangeError here.
     const content = "QUJD".repeat(2 * 1024 * 1024);
     expect(bytesOf(content).length).toBe(6 * 1024 * 1024);
-    expect(() => bytesOf(content + "Q")).toThrow("not valid base64");
-    expect(() => bytesOf(content.slice(0, -1) + "!")).toThrow("not valid base64");
+    expect(() => bytesOf(`${content}Q`)).toThrow("not valid base64");
+    expect(() => bytesOf(`${content.slice(0, -1)}!`)).toThrow("not valid base64");
   });
 });
 
@@ -283,19 +300,26 @@ describe("AsyncJobs.createPlugin", () => {
       { asin: "B0A", geocode: "us" },
       { asin: "B0B", geocode: "de" },
     ];
-    const job = await client(f).jobs.createPlugin("amazon/pdp", params, { WebhookURL: "https://example.com/hook" });
+    const job = await client(f).jobs.createPlugin("amazon/pdp", params, {
+      WebhookURL: "https://example.com/hook",
+    });
 
     expect(job).toEqual({ jobId: "job-p", message: undefined, taskIds: ["t1", "t2"] });
     expect(pathOf(f)).toBe("/api/v1/jobs");
     expect(f.calls[0]!.init?.method).toBe("POST");
     const body = JSON.parse(bodyText(f.calls[0]!.init)!);
-    expect(body).toEqual({ Plugin: { Key: "amazon/pdp", Params: params }, WebhookURL: "https://example.com/hook" });
+    expect(body).toEqual({
+      Plugin: { Key: "amazon/pdp", Params: params },
+      WebhookURL: "https://example.com/hook",
+    });
   });
 
   it("defaults options to an empty object", async () => {
     const f = mockFetch(() => json({ JobID: "j" }));
     await client(f).jobs.createPlugin("google/search", [{ q: "x" }]);
-    expect(JSON.parse(bodyText(f.calls[0]!.init)!)).toEqual({ Plugin: { Key: "google/search", Params: [{ q: "x" }] } });
+    expect(JSON.parse(bodyText(f.calls[0]!.init)!)).toEqual({
+      Plugin: { Key: "google/search", Params: [{ q: "x" }] },
+    });
   });
 
   it("refuses a plugin job it cannot express, before any request", async () => {

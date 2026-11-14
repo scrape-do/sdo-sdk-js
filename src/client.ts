@@ -3,18 +3,23 @@ import { ScrapeConfig, type ScrapeOptions } from "./config.js";
 import { prepareDecoding } from "./decoding.js";
 import { SdoConfigError } from "./errors.js";
 import { checkHeaders } from "./headers.js";
-import { callSignal, JobsClient, type AsyncJobs, type CallOptions } from "./jobs.js";
+import { type AsyncJobs, type CallOptions, callSignal, JobsClient } from "./jobs.js";
 import { plainObject, rejectUnknownKeys } from "./options.js";
 import { callPlugin, pluginResponse } from "./plugins.js";
 import { buildQuery } from "./query.js";
-import { checkSignal, prepareRequest, REQUEST_OPTION_KEYS, type RequestOptions } from "./request.js";
+import {
+  checkSignal,
+  prepareRequest,
+  REQUEST_OPTION_KEYS,
+  type RequestOptions,
+} from "./request.js";
 import { ScrapeResult } from "./response.js";
 import {
   effectiveTimeoutMs,
+  type FetchLike,
   GATEWAY_TIMEOUT_MARGIN_MS,
   MAX_RESPONSE_BYTES,
   Transport,
-  type FetchLike,
 } from "./transport.js";
 import { normalizeBaseUrl } from "./urls.js";
 import { parseUsage, type Usage } from "./usage.js";
@@ -126,7 +131,8 @@ function trimAsciiWhitespace(value: string): string {
  */
 function cleanToken(value: unknown, source: string): string | undefined {
   if (value === undefined || value === null) return undefined;
-  if (typeof value !== "string") throw new SdoConfigError(`The token (${source}) must be a string.`);
+  if (typeof value !== "string")
+    throw new SdoConfigError(`The token (${source}) must be a string.`);
   const token = trimAsciiWhitespace(value);
   if (token === "") return undefined;
   if (!TOKEN_CHARS.test(token)) {
@@ -140,7 +146,9 @@ function cleanToken(value: unknown, source: string): string | undefined {
 function resolveTimeoutMs(explicit: number | undefined): number {
   if (explicit !== undefined) {
     if (typeof explicit !== "number" || !Number.isFinite(explicit) || explicit <= 0) {
-      throw new SdoConfigError(`timeoutMs must be a positive number of milliseconds, got ${String(explicit)}.`);
+      throw new SdoConfigError(
+        `timeoutMs must be a positive number of milliseconds, got ${String(explicit)}.`,
+      );
     }
     return explicit;
   }
@@ -177,18 +185,25 @@ export class Client {
 
   constructor(options: ClientOptions | string = {}) {
     const opts: ClientOptions =
-      typeof options === "string" ? { token: options } : (plainObject(options ?? {}, "Client options") as ClientOptions);
+      typeof options === "string"
+        ? { token: options }
+        : (plainObject(options ?? {}, "Client options") as ClientOptions);
     rejectUnknownKeys(opts as Record<string, unknown>, CLIENT_OPTION_KEYS, "Client option(s)");
 
     // An empty token means "not given", so a blank config value falls back to the env.
-    const token = cleanToken(opts.token, "the token option") ?? cleanToken(env("SDO_TOKEN"), "SDO_TOKEN");
+    const token =
+      cleanToken(opts.token, "the token option") ?? cleanToken(env("SDO_TOKEN"), "SDO_TOKEN");
     if (token === undefined) {
       throw new SdoConfigError("No token provided. Pass new Client({ token }) or set SDO_TOKEN.");
     }
     this.#token = token;
 
     const insecure = opts.allowInsecureHttp === true;
-    this.baseUrl = normalizeBaseUrl(opts.baseUrl || env("SDO_BASE_URL") || DEFAULT_BASE_URL, "baseUrl", insecure);
+    this.baseUrl = normalizeBaseUrl(
+      opts.baseUrl || env("SDO_BASE_URL") || DEFAULT_BASE_URL,
+      "baseUrl",
+      insecure,
+    );
     this.asyncBaseUrl = normalizeBaseUrl(
       opts.asyncBaseUrl || env("SDO_ASYNC_BASE_URL") || DEFAULT_ASYNC_BASE_URL,
       "asyncBaseUrl",
@@ -196,9 +211,15 @@ export class Client {
     );
     this.timeoutMs = resolveTimeoutMs(opts.timeoutMs);
 
-    const maxResponseBytes = finiteNumber("maxResponseBytes", opts.maxResponseBytes, MAX_RESPONSE_BYTES);
+    const maxResponseBytes = finiteNumber(
+      "maxResponseBytes",
+      opts.maxResponseBytes,
+      MAX_RESPONSE_BYTES,
+    );
     if (maxResponseBytes <= 0) throw new SdoConfigError("maxResponseBytes must be positive.");
-    const acceptEncoding = opts.preferBrotli ? "br" : (opts.acceptEncoding ?? DEFAULT_ACCEPT_ENCODING);
+    const acceptEncoding = opts.preferBrotli
+      ? "br"
+      : (opts.acceptEncoding ?? DEFAULT_ACCEPT_ENCODING);
     checkHeaders({ "Accept-Encoding": acceptEncoding }, "acceptEncoding");
     if (opts.fetchImpl !== undefined && typeof opts.fetchImpl !== "function") {
       throw new SdoConfigError("fetchImpl must be a function with the signature of fetch.");
@@ -245,7 +266,8 @@ export class Client {
       config = target;
       request = opts as RequestOptions;
     } else {
-      const { method, json, data, signal, ...scrapeOptions } = opts as ScrapeOptions & RequestOptions;
+      const { method, json, data, signal, ...scrapeOptions } = opts as ScrapeOptions &
+        RequestOptions;
       config = new ScrapeConfig(target, scrapeOptions);
       request = { method, json, data, signal };
     }
@@ -271,7 +293,12 @@ export class Client {
       signal,
     });
     await prepareDecoding(resp.body, resp.headers.get("content-type") ?? undefined);
-    return new ScrapeResult({ content: resp.body, statusCode: resp.status, headers: resp.headers, url: config.url });
+    return new ScrapeResult({
+      content: resp.body,
+      statusCode: resp.status,
+      headers: resp.headers,
+      url: config.url,
+    });
   }
 
   /**
@@ -280,7 +307,11 @@ export class Client {
    * "amazon/") is the Amazon raw-HTML plugin at /plugin/amazon/. `pluginResult`
    * returns the same response with its status and headers.
    */
-  async plugin(route: string, params: Record<string, unknown> = {}, call?: CallOptions): Promise<unknown> {
+  async plugin(
+    route: string,
+    params: Record<string, unknown> = {},
+    call?: CallOptions,
+  ): Promise<unknown> {
     return callPlugin(this.#transport, this.baseUrl, this.#token, route, params, callSignal(call));
   }
 
@@ -289,10 +320,26 @@ export class Client {
    * ScrapeResult: its status, headers (`cost`, `remainingCredits`)
    * and body (`json()` parses it). `url` is "".
    */
-  async pluginResult(route: string, params: Record<string, unknown> = {}, call?: CallOptions): Promise<ScrapeResult> {
-    const resp = await pluginResponse(this.#transport, this.baseUrl, this.#token, route, params, callSignal(call));
+  async pluginResult(
+    route: string,
+    params: Record<string, unknown> = {},
+    call?: CallOptions,
+  ): Promise<ScrapeResult> {
+    const resp = await pluginResponse(
+      this.#transport,
+      this.baseUrl,
+      this.#token,
+      route,
+      params,
+      callSignal(call),
+    );
     await prepareDecoding(resp.body, resp.headers.get("content-type") ?? undefined);
-    return new ScrapeResult({ content: resp.body, statusCode: resp.status, headers: resp.headers, url: "" });
+    return new ScrapeResult({
+      content: resp.body,
+      statusCode: resp.status,
+      headers: resp.headers,
+      url: "",
+    });
   }
 
   /**

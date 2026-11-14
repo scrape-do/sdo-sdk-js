@@ -29,9 +29,14 @@ describe("transport error mapping & retry", () => {
     // The gateway has no 402 tier: a depleted balance also returns 401, so it is
     // told apart by the message rather than the status code.
     const f = mockFetch(
-      () => new Response(JSON.stringify({ Message: ["Monthly credit limit reached"] }), { status: 401 }),
+      () =>
+        new Response(JSON.stringify({ Message: ["Monthly credit limit reached"] }), {
+          status: 401,
+        }),
     );
-    const err = await client(f).scrape("https://e.com").catch((e) => e);
+    const err = await client(f)
+      .scrape("https://e.com")
+      .catch((e) => e);
     expect(err).toBeInstanceOf(SdoAuthError);
     expect(err.message.toLowerCase()).toContain("credit");
     expect(err.billed).toBe(false);
@@ -48,11 +53,11 @@ describe("transport error mapping & retry", () => {
     expect.assertions(2);
   });
 
-  // The gateway answers a parameter it cannot parse (render=mert) before it
+  // The gateway answers a parameter it cannot parse (render=maybe) before it
   // authorizes the request: a 400 with its JSON envelope and no
   // Scrape.do-Request-Cost. That is an unbilled validation error with the
   // gateway's message, never retried.
-  it("surfaces the gateway's own 400 (render=mert) as an unbilled validation error", async () => {
+  it("surfaces the gateway's own 400 (render=maybe) as an unbilled validation error", async () => {
     const body =
       `{"URL":"https://e.com","StatusCode":400,"Message":["'Render' parameter should boolean."],` +
       `"PossibleCauses":["Please check your request."],"Contact":"Please don't hesitate to contact with us via support@scrape.do."}`;
@@ -60,13 +65,16 @@ describe("transport error mapping & retry", () => {
       () =>
         new Response(body, {
           status: 400,
-          headers: { "Content-Type": "application/json; charset=utf-8", "X-Content-Type-Options": "nosniff" },
+          headers: {
+            "Content-Type": "application/json; charset=utf-8",
+            "X-Content-Type-Options": "nosniff",
+          },
         }),
     );
     const err = await client(f)
-      .scrape("https://e.com", { extraParams: { render: "mert" } })
+      .scrape("https://e.com", { extraParams: { render: "maybe" } })
       .catch((e: unknown) => e);
-    expect(new URL(f.calls[0]!.url).searchParams.get("render")).toBe("mert");
+    expect(new URL(f.calls[0]!.url).searchParams.get("render")).toBe("maybe");
     expect(err).toBeInstanceOf(SdoValidationError);
     expect((err as SdoValidationError).message).toBe("'Render' parameter should boolean.");
     expect((err as SdoValidationError).billed).toBe(false);
@@ -130,7 +138,7 @@ describe("transport error mapping & retry", () => {
     await expect(client(f, 0).scrape("https://e.com")).rejects.toBeInstanceOf(SdoConnectionError);
   });
 
-  it("parses the {\"Message\":[...]} envelope into the error message and keeps the raw body", async () => {
+  it('parses the {"Message":[...]} envelope into the error message and keeps the raw body', async () => {
     const body = JSON.stringify({
       Message: ["callback not supported anymore", "use the async job API"],
       PossibleCauses: ["deprecated parameter"],
@@ -167,12 +175,17 @@ describe("transport error mapping & retry", () => {
     const f = mockFetch(() => {
       throw new TypeError("fetch failed");
     });
-    await expect(client(f, 2).scrape("https://e.com", { data: "x" })).rejects.toBeInstanceOf(SdoConnectionError);
+    await expect(client(f, 2).scrape("https://e.com", { data: "x" })).rejects.toBeInstanceOf(
+      SdoConnectionError,
+    );
     expect(f.calls).toHaveLength(1);
   });
 
   it("retries a POST that the gateway refused with 429", async () => {
-    const f = sequence(new Response(null, { status: 429, headers: { "Retry-After": "0" } }), new Response("ok"));
+    const f = sequence(
+      new Response(null, { status: 429, headers: { "Retry-After": "0" } }),
+      new Response("ok"),
+    );
     expect((await client(f, 1).scrape("https://e.com", { json: { a: 1 } })).statusCode).toBe(200);
     expect(f.calls).toHaveLength(2);
   });
@@ -180,7 +193,9 @@ describe("transport error mapping & retry", () => {
   it("reports a timeout that fired before the response as SdoTimeoutError", async () => {
     const f = mockFetch(
       (_u, init) =>
-        new Promise((_r, reject) => init!.signal!.addEventListener("abort", () => reject(init!.signal!.reason))),
+        new Promise((_r, reject) =>
+          init!.signal!.addEventListener("abort", () => reject(init!.signal!.reason)),
+        ),
     );
     const c = new Client({ token: "t", retries: 0, timeoutMs: 20, fetchImpl: f });
     const err = await c.scrape("https://e.com").catch((e) => e);
@@ -196,7 +211,9 @@ describe("transport error mapping & retry", () => {
           headers: { "retry-after": " 7 " },
         }),
     );
-    const err = await client(f, 0).scrape("https://e.com").catch((e) => e);
+    const err = await client(f, 0)
+      .scrape("https://e.com")
+      .catch((e) => e);
     expect(err).toMatchObject({ retryAfter: 7, message: "slow down" });
   });
 
@@ -218,7 +235,9 @@ describe("transport error mapping & retry", () => {
     const body = async function* () {
       yield new Uint8Array(3);
     };
-    await expect(readCapped(body(), 1024, { signal: controller.signal })).rejects.toThrow("deadline");
+    await expect(readCapped(body(), 1024, { signal: controller.signal })).rejects.toThrow(
+      "deadline",
+    );
   });
 });
 
@@ -243,7 +262,9 @@ describe("request cost decides origin and billing", () => {
     });
   }
 
-  const errors: Array<[string, number, string | undefined, new (...a: never[]) => Error, boolean, number | undefined]> = [
+  const errors: Array<
+    [string, number, string | undefined, new (...a: never[]) => Error, boolean, number | undefined]
+  > = [
     ["gateway 401 (refused token)", 401, undefined, SdoAuthError, false, undefined],
     ["401 with cost 0", 401, "0", SdoAuthError, false, 0],
     ["gateway 400", 400, undefined, SdoValidationError, false, undefined],
@@ -252,9 +273,12 @@ describe("request cost decides origin and billing", () => {
   ];
   for (const [name, status, cost, cls, billed, wantCost] of errors) {
     it(`maps ${name}`, async () => {
-      const headers: Record<string, string> = cost === undefined ? {} : { "Scrape.do-Request-Cost": cost };
+      const headers: Record<string, string> =
+        cost === undefined ? {} : { "Scrape.do-Request-Cost": cost };
       const f = mockFetch(() => new Response(null, { status, headers }));
-      const err = await client(f, 0).scrape("https://e.com").catch((e: unknown) => e);
+      const err = await client(f, 0)
+        .scrape("https://e.com")
+        .catch((e: unknown) => e);
       expect(err).toBeInstanceOf(cls);
       expect((err as SdoAuthError).billed).toBe(billed);
       expect((err as SdoAuthError).cost).toBe(wantCost);
@@ -279,7 +303,14 @@ describe("request cost decides origin and billing", () => {
       expect(parseRequestCost(raw), String(raw)).toBe(want);
       const headers = new Headers(raw === null ? {} : { "Scrape.do-Request-Cost": raw });
       expect(targetAnswered(headers), String(raw)).toBe((want ?? 0) > 0);
-      expect(new ScrapeResult({ content: new Uint8Array(), statusCode: 200, headers, url: "https://e.com" }).cost).toBe(want);
+      expect(
+        new ScrapeResult({
+          content: new Uint8Array(),
+          statusCode: 200,
+          headers,
+          url: "https://e.com",
+        }).cost,
+      ).toBe(want);
     }
   });
 });

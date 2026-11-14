@@ -113,7 +113,8 @@ export const nodeSend: Sender = (req) =>
       // A pooled socket the server had already closed fails before any byte of
       // the response: the request was not processed (the documented Node.js
       // keep-alive race), so it counts as not sent.
-      const staleSocket = request.reusedSocket && errorCodes(e).some((c) => c === "ECONNRESET" || c === "EPIPE");
+      const staleSocket =
+        request.reusedSocket && errorCodes(e).some((c) => c === "ECONNRESET" || c === "EPIPE");
       reject(new SendFailure(connected && !staleSocket, e));
     });
     request.once("response", (res) => {

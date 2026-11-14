@@ -2,7 +2,7 @@
 // The HTTP method, body and headers a scrape is sent with (the gateway relays
 // them to the target).
 import { SdoConfigError } from "./errors.js";
-import { checkHeaders, hasHeader, mergeHeaders, type HeaderMap } from "./headers.js";
+import { checkHeaders, type HeaderMap, hasHeader, mergeHeaders } from "./headers.js";
 import { canonicalJson } from "./json.js";
 
 export interface RequestOptions {
@@ -27,7 +27,13 @@ export interface RequestOptions {
 }
 
 /** Every key a RequestOptions object may carry. */
-export const REQUEST_OPTION_KEYS: readonly string[] = ["method", "json", "data", "headers", "signal"];
+export const REQUEST_OPTION_KEYS: readonly string[] = [
+  "method",
+  "json",
+  "data",
+  "headers",
+  "signal",
+];
 
 /** A caller's AbortSignal, or a config error for anything else. */
 export function checkSignal(signal: unknown): AbortSignal | undefined {
@@ -45,11 +51,15 @@ export interface PreparedRequest {
 }
 
 /** Validate the request inputs and build the method, headers and body bytes. */
-export function prepareRequest(req: RequestOptions, baseHeaders?: Record<string, string>): PreparedRequest {
+export function prepareRequest(
+  req: RequestOptions,
+  baseHeaders?: Record<string, string>,
+): PreparedRequest {
   const headers = mergeHeaders(checkHeaders(baseHeaders), checkHeaders(req.headers));
   const hasJson = req.json !== undefined && req.json !== null;
   const hasData = req.data !== undefined && req.data !== null;
-  if (hasJson && hasData) throw new SdoConfigError("Pass either json or data as the request body, not both.");
+  if (hasJson && hasData)
+    throw new SdoConfigError("Pass either json or data as the request body, not both.");
 
   let method: string;
   if (req.method === undefined || req.method === null) {

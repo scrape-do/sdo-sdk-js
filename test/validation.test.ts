@@ -54,7 +54,10 @@ describe("ScrapeConfig value types", () => {
     const options: ScrapeOptions = { superProxy: true };
     const cfg = new ScrapeConfig(U, options);
     options.screenshot = true;
-    expect(cfg.toParams()).toEqual([["url", U], ["super", "true"]]);
+    expect(cfg.toParams()).toEqual([
+      ["url", U],
+      ["super", "true"],
+    ]);
   });
 });
 
@@ -90,7 +93,10 @@ describe("canonical JSON", () => {
 describe("request method and body", () => {
   const send = async (options: Record<string, unknown>) => {
     const f = mockFetch(() => new Response("ok"));
-    await new Client({ token: "TOK", retries: 0, fetchImpl: f }).scrape(U, options as ScrapeOptions);
+    await new Client({ token: "TOK", retries: 0, fetchImpl: f }).scrape(
+      U,
+      options as ScrapeOptions,
+    );
     return f.calls[0]!.init;
   };
 
@@ -105,7 +111,10 @@ describe("request method and body", () => {
   });
 
   it("keeps a caller Content-Type whatever its case, and sends ScrapeOptions headers", async () => {
-    const init = await send({ json: { a: 1 }, headers: { "content-type": "text/json", "X-A": "1" } });
+    const init = await send({
+      json: { a: 1 },
+      headers: { "content-type": "text/json", "X-A": "1" },
+    });
     expect(header(init, "content-type")).toBe("text/json");
     expect(header(init, "x-a")).toBe("1");
   });
@@ -133,15 +142,22 @@ describe("request method and body", () => {
 
 describe("plugin parameters", () => {
   const call = (params: unknown) => {
-    const f = mockFetch(() => new Response("not json", { headers: { "content-type": "application/json" } }));
-    return new Client({ token: "TOK", retries: 0, fetchImpl: f }).plugin("google/search", params as never);
+    const f = mockFetch(
+      () => new Response("not json", { headers: { "content-type": "application/json" } }),
+    );
+    return new Client({ token: "TOK", retries: 0, fetchImpl: f }).plugin(
+      "google/search",
+      params as never,
+    );
   };
 
   it("rejects values that have no query form", async () => {
     await expect(call({ list: [[1]] })).rejects.toBeInstanceOf(SdoConfigError);
     await expect(call({ fn: () => 1 })).rejects.toBeInstanceOf(SdoConfigError);
     await expect(call({ n: Number.NaN })).rejects.toBeInstanceOf(SdoConfigError);
-    await expect(call({ big: { n: Number.POSITIVE_INFINITY } })).rejects.toBeInstanceOf(SdoConfigError);
+    await expect(call({ big: { n: Number.POSITIVE_INFINITY } })).rejects.toBeInstanceOf(
+      SdoConfigError,
+    );
     await expect(call(null)).rejects.toBeInstanceOf(SdoConfigError);
     await expect(call(["a"])).rejects.toBeInstanceOf(SdoConfigError);
   });

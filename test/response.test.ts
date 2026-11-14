@@ -6,7 +6,11 @@ import { SdoTransportError } from "../src/errors.js";
 import { ScrapeResult } from "../src/response.js";
 import { mockFetch } from "./helpers.js";
 
-function make(content: Uint8Array, headers: Record<string, string | string[]> = {}, status = 200): ScrapeResult {
+function make(
+  content: Uint8Array,
+  headers: Record<string, string | string[]> = {},
+  status = 200,
+): ScrapeResult {
   return new ScrapeResult({ content, statusCode: status, headers, url: "https://e.com" });
 }
 
@@ -66,14 +70,18 @@ describe("sniffEncoding", () => {
     expect(pick(enc("<meta charset='windows-1254'>"), "application/json")).toBe("utf-8");
   });
   it("reads a <meta charset> tag in HTML", () => {
-    expect(pick(enc("<html><head><meta charset='windows-1254'>"), "text/html")).toBe("windows-1254");
+    expect(pick(enc("<html><head><meta charset='windows-1254'>"), "text/html")).toBe(
+      "windows-1254",
+    );
     expect(pick(enc("<meta charset=koi8-r>"))).toBe("koi8-r");
   });
   it("skips a meta tag without a usable label and keeps scanning", () => {
-    expect(pick(enc('<meta name="x"><meta charset="bogus"><meta charset="iso-8859-2">'), "text/html")).toBe(
-      "iso-8859-2",
+    expect(
+      pick(enc('<meta name="x"><meta charset="bogus"><meta charset="iso-8859-2">'), "text/html"),
+    ).toBe("iso-8859-2");
+    expect(pick(enc('<meta http-equiv="refresh" content="0; charset=koi8-r">'), "text/html")).toBe(
+      "utf-8",
     );
-    expect(pick(enc('<meta http-equiv="refresh" content="0; charset=koi8-r">'), "text/html")).toBe("utf-8");
   });
   it("maps a <meta> x-user-defined to windows-1252, as the HTML standard does", () => {
     expect(pick(enc('<meta charset="x-user-defined">'), "text/html")).toBe("windows-1252");
@@ -82,19 +90,27 @@ describe("sniffEncoding", () => {
     expect(pick(enc("plain"), "text/html")).toBe("utf-8");
   });
   it("lets a BOM decide and reports its length", () => {
-    expect(sniffEncoding(new Uint8Array([0xef, 0xbb, 0xbf, 0x68]), "text/plain; charset=latin1")).toEqual({
+    expect(
+      sniffEncoding(new Uint8Array([0xef, 0xbb, 0xbf, 0x68]), "text/plain; charset=latin1"),
+    ).toEqual({
       encoding: "utf-8",
       bomLength: 3,
     });
-    expect(sniffEncoding(new Uint8Array([0xff, 0xfe, 0x68, 0x00]))).toEqual({ encoding: "utf-16le", bomLength: 2 });
-    expect(sniffEncoding(new Uint8Array([0xfe, 0xff, 0x00, 0x68]))).toEqual({ encoding: "utf-16be", bomLength: 2 });
+    expect(sniffEncoding(new Uint8Array([0xff, 0xfe, 0x68, 0x00]))).toEqual({
+      encoding: "utf-16le",
+      bomLength: 2,
+    });
+    expect(sniffEncoding(new Uint8Array([0xfe, 0xff, 0x00, 0x68]))).toEqual({
+      encoding: "utf-16be",
+      bomLength: 2,
+    });
   });
 });
 
 describe("Content-Type and <meta> parsing edges", () => {
   const pick = (body: Uint8Array, ct?: string) => sniffEncoding(body, ct).encoding;
   it("skips parameters without a value and tolerates an unterminated quote", () => {
-    expect(pick(enc("x"), "text/plain; format; charset=\"koi8-r")).toBe("koi8-r");
+    expect(pick(enc("x"), 'text/plain; format; charset="koi8-r')).toBe("koi8-r");
   });
   it("follows WHATWG MIME parameter rules: first charset wins, only double quotes unquote", () => {
     expect(pick(enc("x"), "text/plain; charset=iso-8859-2; charset=utf-8")).toBe("iso-8859-2");
@@ -113,24 +129,28 @@ describe("Content-Type and <meta> parsing edges", () => {
   it("prescans like the HTML standard: comments and other tags' attributes are skipped", () => {
     const html = (s: string) => pick(enc(s), "text/html");
     expect(html('<!-- <meta charset="koi8-r"> --><p>')).toBe("utf-8");
-    expect(html('<!--> <meta charset=koi8-r> -->')).toBe("utf-8");
+    expect(html("<!--> <meta charset=koi8-r> -->")).toBe("utf-8");
     expect(html('<div title="<meta charset=koi8-r>">x</div>')).toBe("utf-8");
     expect(html('<!DOCTYPE html><?xml x?></p ><META CHARSET="KOI8-R">')).toBe("koi8-r");
     expect(html(`${" ".repeat(1001)}<meta charset="koi8-r">`)).toBe("koi8-r"); // ">" is byte 1023
     expect(html(`${" ".repeat(1002)}<meta charset="koi8-r">`)).toBe("utf-8"); // ">" is byte 1024
     expect(html('<meta charset="koi8-r" charset="gbk">')).toBe("koi8-r"); // a repeated attribute is ignored
-    expect(html('<meta http-equiv="content-type" content="text/html; charset=\'koi8-r\'">')).toBe("koi8-r");
+    expect(html('<meta http-equiv="content-type" content="text/html; charset=\'koi8-r\'">')).toBe(
+      "koi8-r",
+    );
     expect(html('<meta content="text/html; charset=koi8-r">')).toBe("utf-8"); // no http-equiv
-    expect(html('<meta http-equiv=content-type content="charsetx; charset = koi8-r;x">')).toBe("koi8-r");
+    expect(html('<meta http-equiv=content-type content="charsetx; charset = koi8-r;x">')).toBe(
+      "koi8-r",
+    );
     expect(html('<meta http-equiv=content-type content="charset=\'koi8-r">')).toBe("utf-8");
     expect(html('<meta http-equiv=content-type content="charset=">')).toBe("utf-8");
     expect(html('<meta http-equiv=content-type content="charset">')).toBe("utf-8");
     expect(html('<meta charset="utf-16le">')).toBe("utf-8");
-    expect(html('<meta charset=bogus><meta charset=koi8-r>')).toBe("koi8-r");
+    expect(html("<meta charset=bogus><meta charset=koi8-r>")).toBe("koi8-r");
     expect(html("<meta name=x charset = koi8-r />")).toBe("koi8-r");
     expect(html("<meta charset=koi8-r/>")).toBe("utf-8"); // an unquoted value runs to a space or ">"
     expect(html("<meta charset=koi8-r")).toBe("utf-8"); // never closes
-    expect(html('<meta\u212Aoi8>')).toBe("utf-8");
+    expect(html("<meta\u212Aoi8>")).toBe("utf-8");
     expect(html("<!-- never closed")).toBe("utf-8");
     expect(html("<! never closed")).toBe("utf-8");
     expect(html('<a =x href="y"><meta charset="koi8-r>')).toBe("utf-8");
@@ -142,7 +162,9 @@ describe("Content-Type and <meta> parsing edges", () => {
   });
 
   it("handles valueless attributes and an http-equiv without content", () => {
-    expect(pick(enc('<meta async http-equiv="Content-Type"><meta charset=koi8-r>'), "text/html")).toBe("koi8-r");
+    expect(
+      pick(enc('<meta async http-equiv="Content-Type"><meta charset=koi8-r>'), "text/html"),
+    ).toBe("koi8-r");
   });
 });
 
@@ -180,7 +202,8 @@ describe("text decoding", () => {
   it("keeps the WHATWG correction of a table-decoded encoding on every body", () => {
     // windows-1255 decodes through a per-byte table built once; 0xCA is U+05BA
     // there even where the runtime's ICU table disagrees.
-    const decode = (...b: number[]) => make(Uint8Array.from(b), { "Content-Type": "text/plain; charset=windows-1255" }).text;
+    const decode = (...b: number[]) =>
+      make(Uint8Array.from(b), { "Content-Type": "text/plain; charset=windows-1255" }).text;
     expect(decode(0xca)).toBe("\u05ba");
     expect(decode(0x41, 0xca, 0xe0)).toBe("A\u05ba\u05d0");
   });
@@ -198,8 +221,16 @@ describe("repeated headers", () => {
     h.append("Set-Cookie", "b=2");
     h.append("X-Multi", "x");
     h.append("X-Multi", "y");
-    const r = new ScrapeResult({ content: enc(""), statusCode: 200, headers: h, url: "https://e.com" });
-    expect(r.headerValues("set-cookie")).toEqual(["a=1; Expires=Wed, 21 Oct 2026 07:28:00 GMT", "b=2"]);
+    const r = new ScrapeResult({
+      content: enc(""),
+      statusCode: 200,
+      headers: h,
+      url: "https://e.com",
+    });
+    expect(r.headerValues("set-cookie")).toEqual([
+      "a=1; Expires=Wed, 21 Oct 2026 07:28:00 GMT",
+      "b=2",
+    ]);
     expect(r.headerValues("X-Multi")).toEqual(["x, y"]);
     expect(r.headerValues("absent")).toEqual([]);
     expect(r.headers["set-cookie"]).toBe("a=1; Expires=Wed, 21 Oct 2026 07:28:00 GMT, b=2");

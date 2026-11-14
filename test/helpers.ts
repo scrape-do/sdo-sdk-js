@@ -8,7 +8,11 @@ export interface MockCall {
 
 /** A fetch mock that records calls and returns responses from a handler. */
 export function mockFetch(
-  handler: (url: string, init: RequestInit | undefined, callIndex: number) => Response | Promise<Response>,
+  handler: (
+    url: string,
+    init: RequestInit | undefined,
+    callIndex: number,
+  ) => Response | Promise<Response>,
 ): FetchLike & { calls: MockCall[] } {
   const calls: MockCall[] = [];
   const fn = (async (url: string, init?: RequestInit) => {

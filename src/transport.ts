@@ -14,11 +14,10 @@
 //     billing, the request;
 //   - every failure surfaces as an SdoError with the token masked out of its
 //     message, retained body and cause.
-import { contentCodings, decodeBody, StageTooLarge, type ByteSource } from "./decompress.js";
+import { type ByteSource, contentCodings, decodeBody, StageTooLarge } from "./decompress.js";
 import {
   asyncEnvelopeMessage,
   redactSecrets,
-  sanitizeCause,
   SdoAbortError,
   SdoApiError,
   SdoAuthError,
@@ -29,10 +28,18 @@ import {
   SdoTimeoutError,
   SdoTransportError,
   SdoValidationError,
+  sanitizeCause,
   syncEnvelopeMessage,
 } from "./errors.js";
-import { mergeHeaders, parseRequestCost, trimChars, type HeaderMap } from "./headers.js";
-import { fetchSender, nodeSend, SendFailure, type Exchange, type FetchLike, type Sender } from "./http.js";
+import { type HeaderMap, mergeHeaders, parseRequestCost, trimChars } from "./headers.js";
+import {
+  type Exchange,
+  type FetchLike,
+  fetchSender,
+  nodeSend,
+  type Sender,
+  SendFailure,
+} from "./http.js";
 
 export type { FetchLike } from "./http.js";
 
@@ -52,7 +59,9 @@ const MAX_TIMER_MS = 2_147_483_647;
 // 510 is not transient: the gateway answers it only when the HTTP client
 // cancelled the request before the gateway finished, so a retry would re-send
 // a request its caller abandoned.
-export const RETRYABLE_STATUSES: ReadonlySet<number> = new Set([429, 502, 503, 504, 520, 521, 522, 523, 524]);
+export const RETRYABLE_STATUSES: ReadonlySet<number> = new Set([
+  429, 502, 503, 504, 520, 521, 522, 523, 524,
+]);
 /** The gateway's status for a request its HTTP client cancelled. */
 const CLIENT_CANCELED_STATUS = 510;
 // A request that can have side effects on the target is retried only when the
@@ -117,7 +126,11 @@ export interface CappedBody {
 }
 
 /** Read a body, stopping as soon as it exceeds `limit` bytes. */
-export async function readCapped(source: ByteSource, limit: number, opts: ReadOptions = {}): Promise<CappedBody> {
+export async function readCapped(
+  source: ByteSource,
+  limit: number,
+  opts: ReadOptions = {},
+): Promise<CappedBody> {
   const { signal, truncate = false, release } = opts;
   const it = source[Symbol.asyncIterator]();
   let onAbort: (() => void) | undefined;
@@ -278,7 +291,7 @@ function isResult(ex: Exchange, req: HttpRequest): boolean {
  * whatever its status. The gateway charges the target statuses it counts as
  * delivered (400, 401, 404, 405 and more) and states the charge in
  * Scrape.do-Request-Cost; its own errors — a parameter it cannot parse
- * (render=mert), a refused token, a blocked URL — are written before any cost
+ * (render=maybe), a refused token, a blocked URL — are written before any cost
  * is known and carry no cost header, and a failed fetch carries a cost of 0. A
  * billed response is a result, so it is never retried. Without a readable
  * positive cost the status keeps its gateway meaning, so a gateway message is
@@ -303,16 +316,21 @@ export function buildError(
   const source = complete ? text : undefined;
   const envelope = req.api === "sync" ? syncEnvelopeMessage(source) : asyncEnvelopeMessage(source);
   // The cost header is authoritative; the documented table is the fallback.
-  const cost = req.api === "sync" ? parseRequestCost(resp.headers.get(REQUEST_COST_HEADER)) : undefined;
+  const cost =
+    req.api === "sync" ? parseRequestCost(resp.headers.get(REQUEST_COST_HEADER)) : undefined;
   const common = {
     statusCode: status,
     billed: req.api === "sync" && (cost === undefined ? BILLED_STATUSES.has(status) : cost > 0),
     cost,
     isRetryable: RETRYABLE_STATUSES.has(status),
     retryAfter: parseRetryAfter(resp.headers.get("retry-after")),
-    body: text === undefined ? undefined : truncateChars(redactSecrets(text, req.token), RETAINED_BODY_CHARS),
+    body:
+      text === undefined
+        ? undefined
+        : truncateChars(redactSecrets(text, req.token), RETAINED_BODY_CHARS),
   };
-  const msg = (fallback: string): string => (envelope === undefined ? fallback : redactSecrets(envelope, req.token));
+  const msg = (fallback: string): string =>
+    envelope === undefined ? fallback : redactSecrets(envelope, req.token);
   if (status === 401 || status === 403) {
     // The gateway returns 401 for a depleted credit balance too, so the default
     // message names both causes.
@@ -325,17 +343,26 @@ export function buildError(
     const credits = resp.headers.get("scrape.do-remaining-credits");
     return new SdoConcurrencyError(msg("Concurrent-request limit reached."), {
       ...common,
-      remainingCredits: credits !== null && /^-?[0-9]+$/.test(credits) ? Number(credits) : undefined,
+      remainingCredits:
+        credits !== null && /^-?[0-9]+$/.test(credits) ? Number(credits) : undefined,
     });
   }
-  if (status === 400) return new SdoValidationError(msg("The gateway rejected the request parameters."), common);
+  if (status === 400)
+    return new SdoValidationError(msg("The gateway rejected the request parameters."), common);
   if (status === CLIENT_CANCELED_STATUS) {
     // The gateway's record of a request the client hung up on: not an upstream failure.
-    return new SdoGatewayError(msg(`The request was canceled by the HTTP client (HTTP ${status}).`), common);
+    return new SdoGatewayError(
+      msg(`The request was canceled by the HTTP client (HTTP ${status}).`),
+      common,
+    );
   }
-  if (status >= 500) return new SdoGatewayError(msg(`Gateway-origin upstream failure (HTTP ${status}).`), common);
+  if (status >= 500)
+    return new SdoGatewayError(msg(`Gateway-origin upstream failure (HTTP ${status}).`), common);
   if (status >= 300 && status < 400) {
-    return new SdoApiError(msg(`Unexpected redirect (HTTP ${status}); redirects are never followed.`), common);
+    return new SdoApiError(
+      msg(`Unexpected redirect (HTTP ${status}); redirects are never followed.`),
+      common,
+    );
   }
   return new SdoApiError(msg(`Request failed (HTTP ${status}).`), common);
 }
@@ -374,7 +401,8 @@ export class Transport {
       { "User-Agent": this.#opts.userAgent, "Accept-Encoding": this.#opts.acceptEncoding },
       req.headers,
     );
-    const timeoutMs = req.timeoutMs ?? effectiveTimeoutMs(this.#opts.timeoutMs, req.gatewayTimeoutMs);
+    const timeoutMs =
+      req.timeoutMs ?? effectiveTimeoutMs(this.#opts.timeoutMs, req.gatewayTimeoutMs);
     for (let attempt = 0; ; attempt++) {
       if (req.signal?.aborted) throw aborted(req);
       const deadline = new AbortController();
@@ -383,7 +411,12 @@ export class Transport {
       const signal = req.signal ? AbortSignal.any([deadline.signal, req.signal]) : deadline.signal;
       let outcome: HttpResponse | Retry;
       try {
-        outcome = await this.#attempt(req, headers, { signal, deadline: deadline.signal, timeoutMs }, attempt);
+        outcome = await this.#attempt(
+          req,
+          headers,
+          { signal, deadline: deadline.signal, timeoutMs },
+          attempt,
+        );
       } finally {
         // Only now: the deadline covers the body read, not just the headers.
         clearTimeout(timer);
@@ -397,12 +430,23 @@ export class Transport {
     }
   }
 
-  async #attempt(req: HttpRequest, headers: HeaderMap, at: Attempt, attempt: number): Promise<HttpResponse | Retry> {
+  async #attempt(
+    req: HttpRequest,
+    headers: HeaderMap,
+    at: Attempt,
+    attempt: number,
+  ): Promise<HttpResponse | Retry> {
     const canRetry = attempt < this.#opts.retries;
     const idempotent = !NON_IDEMPOTENT_METHODS.has(req.method);
     let ex: Exchange;
     try {
-      ex = await this.#send({ method: req.method, url: req.url, headers, body: req.body, signal: at.signal });
+      ex = await this.#send({
+        method: req.method,
+        url: req.url,
+        headers,
+        body: req.body,
+        signal: at.signal,
+      });
     } catch (e) {
       const failure = e instanceof SendFailure ? e : new SendFailure(true, e);
       const err = this.#failure(failure.original, req, at);
@@ -424,7 +468,8 @@ export class Transport {
     }
 
     const status = ex.status;
-    const retryable = RETRYABLE_STATUSES.has(status) && (idempotent || NON_IDEMPOTENT_RETRY_STATUSES.has(status));
+    const retryable =
+      RETRYABLE_STATUSES.has(status) && (idempotent || NON_IDEMPOTENT_RETRY_STATUSES.has(status));
     if (retryable && canRetry && req.noStatusRetry !== true) {
       ex.release();
       const seconds = parseRetryAfter(ex.headers.get("retry-after"));
@@ -449,7 +494,9 @@ export class Transport {
   #read(ex: Exchange, limit: number, at: Attempt, truncate: boolean): Promise<CappedBody> {
     const max = this.#opts.maxResponseBytes;
     const raw = rawBody(ex, max);
-    const body = ex.encoded ? decodeBody(raw, contentCodings(ex.headers.get("content-encoding")), max) : raw;
+    const body = ex.encoded
+      ? decodeBody(raw, contentCodings(ex.headers.get("content-encoding")), max)
+      : raw;
     return readCapped(body, limit, { signal: at.signal, truncate, release: () => ex.release() });
   }
 
@@ -462,7 +509,9 @@ export class Transport {
         { cause },
       );
     }
-    return new SdoConnectionError(redactSecrets(`Connection failed: ${cause.message}`, req.token), { cause });
+    return new SdoConnectionError(redactSecrets(`Connection failed: ${cause.message}`, req.token), {
+      cause,
+    });
   }
 
   #bodyFailure(e: unknown, ex: Exchange, req: HttpRequest, at: Attempt): SdoTransportError {
@@ -473,10 +522,14 @@ export class Transport {
     }
     // The target writes the header: it is redacted, then cut short.
     let coding = redactSecrets(ex.headers.get("content-encoding") ?? "", req.token);
-    if (coding.length > MAX_CODING_IN_MESSAGE) coding = `${coding.slice(0, MAX_CODING_IN_MESSAGE)}…`;
+    if (coding.length > MAX_CODING_IN_MESSAGE)
+      coding = `${coding.slice(0, MAX_CODING_IN_MESSAGE)}…`;
     const cause = sanitizeCause(e, req.token);
     return new SdoTransportError(
-      redactSecrets(`The response body could not be decoded (Content-Encoding: ${coding}): ${cause.message}`, req.token),
+      redactSecrets(
+        `The response body could not be decoded (Content-Encoding: ${coding}): ${cause.message}`,
+        req.token,
+      ),
       { cause },
     );
   }

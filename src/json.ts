@@ -9,7 +9,7 @@
 // (integer-like keys first) and Array.prototype.sort compares UTF-16 code units,
 // which puts an astral key such as U+1F600 before U+FF5E. Keys are therefore
 // sorted and written here by hand.
-import { sanitizeCause, SdoConfigError, SdoTransportError } from "./errors.js";
+import { SdoConfigError, SdoTransportError, sanitizeCause } from "./errors.js";
 
 /** Compare two strings by Unicode code point (not UTF-16 code unit). */
 export function compareCodePoints(a: string, b: string): number {
@@ -30,13 +30,18 @@ export function canonicalJson(value: unknown): string {
     return encode(value, new Set());
   } catch (e) {
     // A value nested deeper than the call stack allows.
-    if (e instanceof RangeError) throw new SdoConfigError("JSON cannot represent a value nested this deeply.");
+    if (e instanceof RangeError)
+      throw new SdoConfigError("JSON cannot represent a value nested this deeply.");
     throw e;
   }
 }
 
 function encode(value: unknown, seen: Set<object>): string {
-  if (value !== null && typeof value === "object" && typeof (value as { toJSON?: unknown }).toJSON === "function") {
+  if (
+    value !== null &&
+    typeof value === "object" &&
+    typeof (value as { toJSON?: unknown }).toJSON === "function"
+  ) {
     value = (value as { toJSON: () => unknown }).toJSON();
   }
   if (value === null) return "null";
@@ -44,7 +49,8 @@ function encode(value: unknown, seen: Set<object>): string {
     case "boolean":
       return value ? "true" : "false";
     case "number":
-      if (!Number.isFinite(value)) throw new SdoConfigError(`JSON cannot represent the number ${value}.`);
+      if (!Number.isFinite(value))
+        throw new SdoConfigError(`JSON cannot represent the number ${value}.`);
       return JSON.stringify(value); // ECMAScript Number::toString; -0 -> "0"
     case "string":
       return JSON.stringify(value);
@@ -59,13 +65,13 @@ function encode(value: unknown, seen: Set<object>): string {
   let out: string;
   if (Array.isArray(obj)) {
     // As JSON.stringify: an array hole or unrepresentable element becomes null.
-    out = "[" + obj.map((v) => (isSkippable(v) ? "null" : encode(v, seen))).join(",") + "]";
+    out = `[${obj.map((v) => (isSkippable(v) ? "null" : encode(v, seen))).join(",")}]`;
   } else {
     const rec = obj as Record<string, unknown>;
     const keys = Object.keys(rec)
       .filter((k) => !isSkippable(rec[k]))
       .sort(compareCodePoints);
-    out = "{" + keys.map((k) => JSON.stringify(k) + ":" + encode(rec[k], seen)).join(",") + "}";
+    out = `{${keys.map((k) => `${JSON.stringify(k)}:${encode(rec[k], seen)}`).join(",")}}`;
   }
   seen.delete(obj);
   return out;
@@ -98,7 +104,8 @@ export function parseJsonBody(bytes: Uint8Array, what: string, token?: string): 
     if (typeof v === "number" && !Number.isFinite(v)) {
       throw new SdoTransportError(`${what} is not valid JSON: a number overflows a double.`);
     }
-    if (v !== null && typeof v === "object") for (const child of Object.values(v)) stack.push(child);
+    if (v !== null && typeof v === "object")
+      for (const child of Object.values(v)) stack.push(child);
   }
   return value;
 }

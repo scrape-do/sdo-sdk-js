@@ -125,13 +125,18 @@ const PARAMS: readonly Param[] = [
   // Free-form codes: sent exactly as given (the gateway normalizes them).
   { opt: "geoCode", wire: "geoCode", kind: STRING },
   { opt: "regionalGeoCode", wire: "regionalGeoCode", kind: STRING },
-  { opt: "zipCode", wire: "zipCode", kind: STRING },
+  { opt: "zipCode", wire: "zipcode", kind: STRING },
   { opt: "sessionId", wire: "sessionId", kind: { t: "session" } },
   { opt: "setCookies", wire: "setCookies", kind: STRING },
   { opt: "customHeaders", wire: "customHeaders", kind: BOOL },
   { opt: "extraHeaders", wire: "extraHeaders", kind: BOOL },
   { opt: "forwardHeaders", wire: "forwardHeaders", kind: BOOL },
-  { opt: "customWait", wire: "customWait", kind: { t: "int", min: 0, max: 35000 }, renderOnly: true },
+  {
+    opt: "customWait",
+    wire: "customWait",
+    kind: { t: "int", min: 0, max: 35000 },
+    renderOnly: true,
+  },
   { opt: "waitSelector", wire: "waitSelector", kind: STRING, renderOnly: true },
   {
     opt: "waitUntil",
@@ -167,12 +172,20 @@ const RESERVED_EXTRA = new Set(["token", "url"]);
 export const PARAM_NAME = /^[A-Za-z][A-Za-z0-9_.-]*$/;
 
 /** Every key a ScrapeOptions object may carry. */
-export const SCRAPE_OPTION_KEYS: readonly string[] = ["render", ...PARAMS.map((p) => p.opt), "headers", "extraParams"];
+export const SCRAPE_OPTION_KEYS: readonly string[] = [
+  "render",
+  ...PARAMS.map((p) => p.opt),
+  "headers",
+  "extraParams",
+];
 // Wire names (`super`, `screenShot`, ...) get a "did you mean" hint too.
 const WIRE_ALIASES: ReadonlyArray<readonly [string, string]> = PARAMS.map((p) => [p.wire, p.opt]);
 
 /** Throws SdoConfigError naming every key of `options` that is not a scrape option (or one of `also`). */
-export function rejectUnknownScrapeOptions(options: Record<string, unknown>, also: readonly string[] = []): void {
+export function rejectUnknownScrapeOptions(
+  options: Record<string, unknown>,
+  also: readonly string[] = [],
+): void {
   rejectUnknownKeys(
     options,
     [...SCRAPE_OPTION_KEYS, ...also],
@@ -183,7 +196,12 @@ export function rejectUnknownScrapeOptions(options: Record<string, unknown>, als
 }
 
 function invalid(name: string, expected: string, value: unknown): SdoConfigError {
-  const shown = typeof value === "string" ? JSON.stringify(value) : Array.isArray(value) ? "an array" : String(value);
+  const shown =
+    typeof value === "string"
+      ? JSON.stringify(value)
+      : Array.isArray(value)
+        ? "an array"
+        : String(value);
   return new SdoConfigError(`'${name}' must be ${expected}, got ${shown}.`);
 }
 
@@ -207,7 +225,8 @@ function encodeParam(p: Param, value: unknown): string[] | undefined {
       return [value ? "true" : "false"];
     case "int": {
       if (value === 0) return undefined;
-      if (typeof value !== "number" || !Number.isSafeInteger(value)) throw invalid(p.opt, "an integer", value);
+      if (typeof value !== "number" || !Number.isSafeInteger(value))
+        throw invalid(p.opt, "an integer", value);
       if ((k.min !== undefined && value < k.min) || (k.max !== undefined && value > k.max)) {
         // Name the unit: `timeout: 30` meaning 30 seconds is the classic mistake.
         throw new SdoConfigError(
@@ -227,13 +246,15 @@ function encodeParam(p: Param, value: unknown): string[] | undefined {
         typeof value === "number"
           ? Number.isSafeInteger(value) && value >= 0 && value <= MAX_SESSION_ID
           : typeof value === "string" && SESSION_ID.test(value) && Number(value) <= MAX_SESSION_ID;
-      if (!ok) throw invalid(p.opt, "an integer from 0 to 1000000 (a number or decimal digits)", value);
+      if (!ok)
+        throw invalid(p.opt, "an integer from 0 to 1000000 (a number or decimal digits)", value);
       return [String(value)];
     }
     case "enum": {
       if (value === "") return undefined;
       const lower = typeof value === "string" ? value.toLowerCase() : undefined;
-      if (lower === undefined || !k.values.includes(lower)) throw invalid(p.opt, `one of ${k.values.join(", ")}`, value);
+      if (lower === undefined || !k.values.includes(lower))
+        throw invalid(p.opt, `one of ${k.values.join(", ")}`, value);
       return [lower];
     }
     case "json":
@@ -247,7 +268,8 @@ function encodeRender(value: unknown): string | undefined {
   if (value === undefined || value === null || value === false || value === "") return undefined;
   if (value === true) return "true";
   const lower = typeof value === "string" ? value.toLowerCase() : undefined;
-  if (lower === undefined || !RENDER_VALUES.includes(lower)) throw invalid("render", "true or false", value);
+  if (lower === undefined || !RENDER_VALUES.includes(lower))
+    throw invalid("render", "true or false", value);
   // "false" is the same request as no render at all.
   return lower === "false" ? undefined : lower;
 }
@@ -262,20 +284,26 @@ function checkDependencies(sent: ReadonlySet<keyof ScrapeOptions>, rendering: bo
   const fail = (message: string): never => {
     throw new SdoConfigError(message);
   };
-  const count = (...opts: Array<keyof ScrapeOptions>): number => opts.filter((o) => sent.has(o)).length;
+  const count = (...opts: Array<keyof ScrapeOptions>): number =>
+    opts.filter((o) => sent.has(o)).length;
   if (sent.has("regionalGeoCode")) {
     if (!sent.has("superProxy")) fail("'regionalGeoCode' requires superProxy: true.");
-    if (sent.has("geoCode")) fail("'regionalGeoCode' and 'geoCode' cannot be combined; set only one of them.");
+    if (sent.has("geoCode"))
+      fail("'regionalGeoCode' and 'geoCode' cannot be combined; set only one of them.");
   }
   if (sent.has("zipCode") && !(sent.has("superProxy") && sent.has("geoCode"))) {
     fail("'zipCode' requires superProxy: true and a geoCode (the country of the postal code).");
   }
   if (count("customHeaders", "extraHeaders", "forwardHeaders") > 1) {
-    fail("'customHeaders', 'extraHeaders' and 'forwardHeaders' cannot be combined; set only one of them.");
+    fail(
+      "'customHeaders', 'extraHeaders' and 'forwardHeaders' cannot be combined; set only one of them.",
+    );
   }
   if (sent.has("retryTimeout") && rendering) fail("'retryTimeout' cannot be combined with render.");
   if (count("screenshot", "fullScreenshot", "particularScreenshot") > 1) {
-    fail("'screenshot', 'fullScreenshot' and 'particularScreenshot' cannot be combined; set only one of them.");
+    fail(
+      "'screenshot', 'fullScreenshot' and 'particularScreenshot' cannot be combined; set only one of them.",
+    );
   }
   if (!sent.has("returnJson")) {
     for (const opt of [
@@ -285,7 +313,8 @@ function checkDependencies(sent: ReadonlySet<keyof ScrapeOptions>, rendering: bo
       "fullScreenshot",
       "particularScreenshot",
     ] as const) {
-      if (sent.has(opt)) fail(`'${opt}' requires returnJson: true (its output is part of the JSON response).`);
+      if (sent.has(opt))
+        fail(`'${opt}' requires returnJson: true (its output is part of the JSON response).`);
     }
   }
   if (sent.has("particularScreenshot") && sent.has("playWithBrowser")) {
@@ -346,7 +375,8 @@ export class ScrapeConfig {
 
     const extra = o.extraParams;
     if (extra !== undefined && extra !== null) {
-      if (typeof extra !== "object" || Array.isArray(extra)) throw invalid("extraParams", "a plain object", extra);
+      if (typeof extra !== "object" || Array.isArray(extra))
+        throw invalid("extraParams", "a plain object", extra);
       const rec = extra as Record<string, unknown>;
       for (const key of Object.keys(rec).sort(compareCodePoints)) {
         if (key === "") throw new SdoConfigError("extraParams keys cannot be empty.");

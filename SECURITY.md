@@ -1,3 +1,4 @@
+<!-- SPDX-License-Identifier: Apache-2.0 -->
 # Security Policy
 
 This document describes how to report a vulnerability in **`@scrape-do/sdk`** (the `sdo-sdk-js` repository) and what you can expect from us in return. It is part of the `sdo` open-source project — Scrape.do's official SDK, CLI, and MCP tooling.
@@ -14,7 +15,7 @@ Use **either** private channel below — both reach the same maintainer:
    Go to the repository's **Security** tab → **Report a vulnerability**. This opens a private advisory (GHSA) draft visible only to you and the maintainers, and keeps the disclosure timeline, fix, and credit in one place.
 
 2. **Email** — **security@scrape.do**
-   Encrypt if you can; if you cannot, send a plain report and we will move it into a private GitHub advisory.
+   PGP is available on request. We move an emailed report into a private GitHub advisory.
 
 Please include as much of the following as you can:
 
@@ -27,7 +28,7 @@ You may report anonymously. If you'd like credit in the published advisory, tell
 
 ## The Sensitive Asset: Your API Token
 
-The single most sensitive value handled by this SDK is your **Scrape.do API token**, supplied via the **`SDO_TOKEN`** environment variable (token-only auth — there is no other credential type).
+The single most sensitive value handled by this SDK is your **Scrape.do API token**, supplied through the `token` option or the **`SDO_TOKEN`** environment variable (token-only auth — there is no other credential type).
 
 How the SDK treats it, and what to keep in mind when filing a report:
 
@@ -39,7 +40,7 @@ Findings that cause the token (or any portion of it) to be logged, serialized in
 
 ## Supported Versions
 
-Security fixes are released for the **latest minor** of the current major. Older minors do not receive backported patches; upgrade to the latest minor to stay supported.
+Security fixes are released for the **latest minor** of the current major. Older minors do not receive backported patches; upgrade to the latest minor to stay supported (`npm install @scrape-do/sdk@latest`).
 
 | Version | Supported |
 | ------- | --------- |
@@ -54,8 +55,8 @@ We aim to meet the following timelines from first receipt of a valid report:
 
 | Stage | Target |
 | ----- | ------ |
-| Acknowledge receipt | within **48 hours** |
-| Initial triage & severity assessment | within **5 business days** |
+| Acknowledge receipt | within **3 business days** |
+| Initial triage & severity assessment | within **7 business days** |
 | Status update cadence while open | at least every **7 days** |
 | Fix or mitigation for critical/high severity | target within **30 days** of triage |
 
@@ -77,7 +78,7 @@ We ask reporters to keep details private until the advisory is published. We wil
 
 In scope: vulnerabilities in the `@scrape-do/sdk` package source as published from this repository.
 
-Out of scope: issues in the Scrape.do platform/API itself (report those to **security@scrape.do** as well, noting it's a platform issue), vulnerabilities solely in third-party dependencies without a demonstrated impact through this SDK, and findings that require a compromised local environment or a leaked `SDO_TOKEN` obtained outside the SDK.
+Out of scope: issues in the Scrape.do platform/API itself (for those, email security@scrape.do and say the issue is in the Scrape.do service itself rather than in this repository), vulnerabilities solely in third-party dependencies without a demonstrated impact through this SDK, and findings that require a compromised local environment or a leaked `SDO_TOKEN` obtained outside the SDK.
 
 ---
 

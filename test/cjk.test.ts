@@ -10,7 +10,12 @@ import { ScrapeResult } from "../src/response.js";
 const bytes = (...b: number[]) => Uint8Array.from(b);
 const cps = (s: string | undefined) => [...(s ?? "")].map((c) => c.codePointAt(0)!.toString(16));
 const html = (charset: string, body: Uint8Array) =>
-  new ScrapeResult({ content: body, statusCode: 200, headers: { "content-type": `text/html; charset=${charset}` }, url: "u" });
+  new ScrapeResult({
+    content: body,
+    statusCode: 200,
+    headers: { "content-type": `text/html; charset=${charset}` },
+    url: "u",
+  });
 
 describe("before the tables are loaded", () => {
   it("a hand-built result falls back to the runtime's decoder", async () => {
@@ -37,13 +42,25 @@ describe("with the tables loaded", () => {
   it("decodes Big5, including HKSCS pairs and astral code points", async () => {
     await loadCjkTables();
     expect(decodeCjk("big5", bytes(0xa4, 0x40))).toBe("一");
-    expect(cps(decodeCjk("big5", bytes(0x88, 0x62, 0x88, 0x64, 0x88, 0xa3, 0x88, 0xa5)))).toEqual(
-      ["ca", "304", "ca", "30c", "ea", "304", "ea", "30c"],
-    );
+    expect(cps(decodeCjk("big5", bytes(0x88, 0x62, 0x88, 0x64, 0x88, 0xa3, 0x88, 0xa5)))).toEqual([
+      "ca",
+      "304",
+      "ca",
+      "30c",
+      "ea",
+      "304",
+      "ea",
+      "30c",
+    ]);
     expect(cps(decodeCjk("big5", bytes(0x87, 0x45)))).toEqual(["27267"]);
-    expect(cps(decodeCjk("big5", bytes(0x83, 0x46, 0x81, 0x30, 0xff, 0xa4)))).toEqual(
-      ["fffd", "46", "fffd", "30", "fffd", "fffd"],
-    );
+    expect(cps(decodeCjk("big5", bytes(0x83, 0x46, 0x81, 0x30, 0xff, 0xa4)))).toEqual([
+      "fffd",
+      "46",
+      "fffd",
+      "30",
+      "fffd",
+      "fffd",
+    ]);
     // An invalid trail byte that is not ASCII is consumed with the lead.
     expect(cps(decodeCjk("big5", bytes(0x81, 0xff, 0x41)))).toEqual(["fffd", "41"]);
   });
@@ -51,10 +68,21 @@ describe("with the tables loaded", () => {
   it("decodes Shift_JIS, including half-width katakana, EUDC and 0x80", async () => {
     await loadCjkTables();
     expect(decodeCjk("shift_jis", bytes(0x82, 0xa0, 0x88, 0x9f, 0x1a))).toBe("あ亜\u001a");
-    expect(cps(decodeCjk("shift_jis", bytes(0x80, 0xa1, 0xdf, 0xf0, 0x40)))).toEqual(["80", "ff61", "ff9f", "e000"]);
-    expect(cps(decodeCjk("shift_jis", bytes(0x86, 0x6e, 0xa0, 0xfd, 0x81, 0x7f, 0xe0)))).toEqual(
-      ["fffd", "6e", "fffd", "fffd", "fffd", "7f", "fffd"],
-    );
+    expect(cps(decodeCjk("shift_jis", bytes(0x80, 0xa1, 0xdf, 0xf0, 0x40)))).toEqual([
+      "80",
+      "ff61",
+      "ff9f",
+      "e000",
+    ]);
+    expect(cps(decodeCjk("shift_jis", bytes(0x86, 0x6e, 0xa0, 0xfd, 0x81, 0x7f, 0xe0)))).toEqual([
+      "fffd",
+      "6e",
+      "fffd",
+      "fffd",
+      "fffd",
+      "7f",
+      "fffd",
+    ]);
     expect(cps(decodeCjk("shift_jis", bytes(0x81, 0xfd, 0x41)))).toEqual(["fffd", "41"]);
   });
 

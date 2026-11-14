@@ -15,7 +15,7 @@ export function pctEncode(s: string): string {
   let out = "";
   for (const byte of encoder.encode(s)) {
     const ch = String.fromCharCode(byte);
-    out += UNRESERVED.test(ch) ? ch : "%" + byte.toString(16).toUpperCase().padStart(2, "0");
+    out += UNRESERVED.test(ch) ? ch : `%${byte.toString(16).toUpperCase().padStart(2, "0")}`;
   }
   return out;
 }

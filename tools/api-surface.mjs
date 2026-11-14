@@ -42,25 +42,47 @@ const HEADER = [
 
 function emitDeclarations() {
   const configFile = join(repoRoot, "tsconfig.json");
-  const parsed = ts.getParsedCommandLineOfConfigFile(configFile, {}, {
-    ...ts.sys,
-    onUnRecoverableConfigFileDiagnostic: (d) => {
-      throw new Error(ts.flattenDiagnosticMessageText(d.messageText, "\n"));
+  const parsed = ts.getParsedCommandLineOfConfigFile(
+    configFile,
+    {},
+    {
+      ...ts.sys,
+      onUnRecoverableConfigFileDiagnostic: (d) => {
+        throw new Error(ts.flattenDiagnosticMessageText(d.messageText, "\n"));
+      },
     },
-  });
-  const options = { ...parsed.options, declaration: true, emitDeclarationOnly: true, noEmit: false, outDir: "/api" };
+  );
+  const options = {
+    ...parsed.options,
+    declaration: true,
+    emitDeclarationOnly: true,
+    noEmit: false,
+    outDir: "/api",
+  };
   const program = ts.createProgram([join(repoRoot, "src", "index.ts")], options);
   const files = new Map();
-  const result = program.emit(undefined, (name, text) => files.set(basename(name), text), undefined, true);
+  const result = program.emit(
+    undefined,
+    (name, text) => files.set(basename(name), text),
+    undefined,
+    true,
+  );
   const errors = ts.getPreEmitDiagnostics(program).concat(result.diagnostics);
   if (errors.length > 0) {
-    throw new Error(ts.formatDiagnostics(errors, { getCanonicalFileName: (f) => f, getCurrentDirectory: () => repoRoot, getNewLine: () => "\n" }));
+    throw new Error(
+      ts.formatDiagnostics(errors, {
+        getCanonicalFileName: (f) => f,
+        getCurrentDirectory: () => repoRoot,
+        getNewLine: () => "\n",
+      }),
+    );
   }
   return files;
 }
 
 const printer = ts.createPrinter({ removeComments: true, newLine: ts.NewLineKind.LineFeed });
-const text = (node, sf) => printer.printNode(ts.EmitHint.Unspecified, node, sf).replace(/\s+/g, " ").trim();
+const text = (node, sf) =>
+  printer.printNode(ts.EmitHint.Unspecified, node, sf).replace(/\s+/g, " ").trim();
 const typeText = (node, sf) => (node ? text(node, sf) : "any");
 const isPrivate = (m) =>
   (m.name && ts.isPrivateIdentifier(m.name)) ||
@@ -70,7 +92,12 @@ const isStatic = (m) => (ts.getCombinedModifierFlags(m) & ts.ModifierFlags.Stati
 
 /** Public names re-exported from index.d.ts -> { file, local } of their declaration. */
 function readExports(files) {
-  const sf = ts.createSourceFile("index.d.ts", files.get("index.d.ts"), ts.ScriptTarget.Latest, true);
+  const sf = ts.createSourceFile(
+    "index.d.ts",
+    files.get("index.d.ts"),
+    ts.ScriptTarget.Latest,
+    true,
+  );
   const out = new Map();
   for (const stmt of sf.statements) {
     if (!ts.isExportDeclaration(stmt) || !stmt.moduleSpecifier || !stmt.exportClause) continue;
@@ -88,7 +115,8 @@ function declarations(files, file) {
   const decls = new Map();
   const add = (name, node) => decls.set(name, [...(decls.get(name) ?? []), node]);
   for (const stmt of sf.statements) {
-    if (ts.isVariableStatement(stmt)) for (const d of stmt.declarationList.declarations) add(d.name.text, d);
+    if (ts.isVariableStatement(stmt))
+      for (const d of stmt.declarationList.declarations) add(d.name.text, d);
     else if (stmt.name && ts.isIdentifier(stmt.name)) add(stmt.name.text, stmt);
   }
   return { sf, decls };
@@ -107,11 +135,18 @@ function referencedTypes(node) {
 
 // Type parameters stay out of the owner token: ` [generic <T = unknown>]`.
 const generics = (fn, sf) =>
-  fn.typeParameters?.length ? ` [generic <${fn.typeParameters.map((t) => text(t, sf)).join(", ")}>]` : "";
+  fn.typeParameters?.length
+    ? ` [generic <${fn.typeParameters.map((t) => text(t, sf)).join(", ")}>]`
+    : "";
 
 function heritage(node, sf) {
   const clauses = node.heritageClauses ?? [];
-  return clauses.map((c) => ` ${c.token === ts.SyntaxKind.ExtendsKeyword ? "extends" : "implements"} ${c.types.map((t) => text(t, sf)).join(", ")}`).join("");
+  return clauses
+    .map(
+      (c) =>
+        ` ${c.token === ts.SyntaxKind.ExtendsKeyword ? "extends" : "implements"} ${c.types.map((t) => text(t, sf)).join(", ")}`,
+    )
+    .join("");
 }
 
 function main() {
@@ -127,7 +162,9 @@ function main() {
       const name = (p.dotDotDotToken ? "..." : "") + text(p.name, sf);
       const optional = Boolean(p.questionToken || p.initializer || p.dotDotDotToken);
       for (const t of referencedTypes(p.type)) inputTypes.add(t);
-      lines.add(`param ${owner} #${i} ${name}${optional ? "?" : ""}: ${typeText(p.type, sf)}${optional ? "" : " [required]"}`);
+      lines.add(
+        `param ${owner} #${i} ${name}${optional ? "?" : ""}: ${typeText(p.type, sf)}${optional ? "" : " [required]"}`,
+      );
     });
   };
 
@@ -147,10 +184,16 @@ function main() {
             paramLines(`${name}.constructor`, m, sf);
           } else if (ts.isPropertyDeclaration(m)) {
             const opt = m.questionToken ? "?" : "";
-            lines.add(`prop ${name} ${text(m.name, sf)}${opt}: ${typeText(m.type, sf)}${isReadonly(m) ? " [readonly]" : ""}${flags}`);
+            lines.add(
+              `prop ${name} ${text(m.name, sf)}${opt}: ${typeText(m.type, sf)}${isReadonly(m) ? " [readonly]" : ""}${flags}`,
+            );
           } else if (ts.isGetAccessorDeclaration(m)) {
-            const settable = node.members.some((o) => ts.isSetAccessorDeclaration(o) && text(o.name, sf) === text(m.name, sf));
-            lines.add(`prop ${name} ${text(m.name, sf)}: ${typeText(m.type, sf)}${settable ? "" : " [readonly]"}${flags}`);
+            const settable = node.members.some(
+              (o) => ts.isSetAccessorDeclaration(o) && text(o.name, sf) === text(m.name, sf),
+            );
+            lines.add(
+              `prop ${name} ${text(m.name, sf)}: ${typeText(m.type, sf)}${settable ? "" : " [readonly]"}${flags}`,
+            );
           } else if (ts.isMethodDeclaration(m)) {
             const owner = `${name}.${text(m.name, sf)}`;
             lines.add(`method ${owner} -> ${typeText(m.type, sf)}${generics(m, sf)}${flags}`);
@@ -170,7 +213,13 @@ function main() {
         // `export declare const VERSION = "0.1.0"` carries its value as the type;
         // only the kind of value is API.
         const init = node.initializer;
-        const kind = !init ? "unknown" : ts.isStringLiteral(init) ? "string" : ts.isNumericLiteral(init) ? "number" : "unknown";
+        const kind = !init
+          ? "unknown"
+          : ts.isStringLiteral(init)
+            ? "string"
+            : ts.isNumericLiteral(init)
+              ? "number"
+              : "unknown";
         lines.add(`const ${name}: ${node.type ? typeText(node.type, sf) : kind}`);
       }
     }
@@ -183,9 +232,16 @@ function main() {
     grew = false;
     for (const { name, node, sf } of interfaces) {
       if (!inputTypes.has(name)) continue;
-      const refs = [...(node.heritageClauses ?? []).flatMap((c) => c.types.map((t) => text(t.expression, sf)))];
+      const refs = [
+        ...(node.heritageClauses ?? []).flatMap((c) => c.types.map((t) => text(t.expression, sf))),
+      ];
       for (const m of node.members) for (const t of referencedTypes(m.type)) refs.push(t);
-      for (const r of refs) if (!inputTypes.has(r)) (inputTypes.add(r), (grew = true));
+      for (const r of refs) {
+        if (!inputTypes.has(r)) {
+          inputTypes.add(r);
+          grew = true;
+        }
+      }
     }
   }
 
@@ -195,17 +251,21 @@ function main() {
       if (ts.isPropertySignature(m)) {
         const optional = Boolean(m.questionToken);
         const required = input && !optional ? " [required]" : "";
-        lines.add(`prop ${name} ${text(m.name, sf)}${optional ? "?" : ""}: ${typeText(m.type, sf)}${required}`);
+        lines.add(
+          `prop ${name} ${text(m.name, sf)}${optional ? "?" : ""}: ${typeText(m.type, sf)}${required}`,
+        );
       } else if (ts.isMethodSignature(m)) {
         const owner = `${name}.${text(m.name, sf)}`;
-        lines.add(`method ${owner} -> ${typeText(m.type, sf)}${generics(m, sf)}${input ? " [required]" : ""}`);
+        lines.add(
+          `method ${owner} -> ${typeText(m.type, sf)}${generics(m, sf)}${input ? " [required]" : ""}`,
+        );
         paramLines(owner, m, sf);
       }
     }
   }
 
   const sorted = [...lines].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
-  writeFileSync(OUT, [...HEADER, ...sorted].join("\n") + "\n");
+  writeFileSync(OUT, `${[...HEADER, ...sorted].join("\n")}\n`);
   process.stdout.write(`api-surface: ${sorted.length} line(s) -> api-surface.txt\n`);
 }
 

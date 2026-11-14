@@ -21,7 +21,11 @@ export interface TestServer {
   close(): Promise<void>;
 }
 
-export type Handler = (req: Captured, res: http.ServerResponse, index: number) => void | Promise<void>;
+export type Handler = (
+  req: Captured,
+  res: http.ServerResponse,
+  index: number,
+) => void | Promise<void>;
 
 export async function startServer(handler: Handler): Promise<TestServer> {
   const requests: Captured[] = [];
@@ -29,7 +33,8 @@ export async function startServer(handler: Handler): Promise<TestServer> {
     const chunks: Buffer[] = [];
     for await (const chunk of req) chunks.push(chunk as Buffer);
     const headers: Array<[string, string]> = [];
-    for (let i = 0; i + 1 < req.rawHeaders.length; i += 2) headers.push([req.rawHeaders[i]!, req.rawHeaders[i + 1]!]);
+    for (let i = 0; i + 1 < req.rawHeaders.length; i += 2)
+      headers.push([req.rawHeaders[i]!, req.rawHeaders[i + 1]!]);
     const captured = { method: req.method!, url: req.url!, headers, body: Buffer.concat(chunks) };
     const index = requests.length;
     requests.push(captured);
@@ -58,7 +63,10 @@ export function received(req: Captured, name: string): string[] {
 }
 
 /** Start a server for one test body and always close it. */
-export async function withServer<T>(handler: Handler, body: (server: TestServer) => Promise<T>): Promise<T> {
+export async function withServer<T>(
+  handler: Handler,
+  body: (server: TestServer) => Promise<T>,
+): Promise<T> {
   const server = await startServer(handler);
   try {
     return await body(server);

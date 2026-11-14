@@ -8,7 +8,11 @@ import { mockFetch, params } from "./helpers.js";
 describe("plugins", () => {
   it("returns raw bytes for a non-JSON plugin and serializes params", async () => {
     const f = mockFetch(
-      () => new Response(new Uint8Array([1, 2, 3]), { status: 200, headers: { "Content-Type": "image/png" } }),
+      () =>
+        new Response(new Uint8Array([1, 2, 3]), {
+          status: 200,
+          headers: { "Content-Type": "image/png" },
+        }),
     );
     const client = new Client({ token: "t", fetchImpl: f });
     const out = await client.plugin("amazon/product", { flag: true, ids: [1, 2], skip: null });
@@ -32,7 +36,10 @@ describe("plugins", () => {
   for (const [name, status, headers] of results) {
     it(`returns a ${name} as a result`, async () => {
       const f = mockFetch(() => new Response("page", { status, headers }));
-      const out = await new Client({ token: "t", retries: 0, fetchImpl: f }).plugin("google/search", { q: "x" });
+      const out = await new Client({ token: "t", retries: 0, fetchImpl: f }).plugin(
+        "google/search",
+        { q: "x" },
+      );
       expect(new TextDecoder().decode(out as Uint8Array)).toBe("page");
     });
   }
@@ -45,7 +52,12 @@ describe("plugins", () => {
       "ZIP code format doesn't match country requirements",
     ],
     ["plugin error code only", `{"error":"timeout is invalid"}`, {}, "timeout is invalid"],
-    ["unbilled 400 with a zero cost", `{"Message":"nope"}`, { "Scrape.do-Request-Cost": "0" }, "nope"],
+    [
+      "unbilled 400 with a zero cost",
+      `{"Message":"nope"}`,
+      { "Scrape.do-Request-Cost": "0" },
+      "nope",
+    ],
   ];
   for (const [name, body, headers, message] of gatewayErrors) {
     it(`surfaces a ${name} as an unbilled validation error`, async () => {
@@ -73,16 +85,26 @@ describe("plugins", () => {
 
   it("gives a positive integer timeout param the gateway margin", async () => {
     const client = new Client({ token: "t", retries: 0, timeoutMs: 50, fetchImpl: slow });
-    await expect(client.plugin("walmart/search", { q: "x", timeout: 100 })).resolves.toBeInstanceOf(Uint8Array);
-    await expect(client.plugin("walmart/search", { q: "x" })).rejects.toBeInstanceOf(SdoTimeoutError);
+    await expect(client.plugin("walmart/search", { q: "x", timeout: 100 })).resolves.toBeInstanceOf(
+      Uint8Array,
+    );
+    await expect(client.plugin("walmart/search", { q: "x" })).rejects.toBeInstanceOf(
+      SdoTimeoutError,
+    );
   });
 
   it("reads the timeout param only as one positive integer", () => {
     expect(pluginTimeoutMs([])).toBeUndefined();
     expect(pluginTimeoutMs([["q", "x"]])).toBeUndefined();
     expect(pluginTimeoutMs([["timeout", "30000"]])).toBe(30000);
-    for (const v of ["0", "1.5", "-5", "abc", "", " 5"]) expect(pluginTimeoutMs([["timeout", v]]), v).toBeUndefined();
-    expect(pluginTimeoutMs([["timeout", "1000"], ["timeout", "2000"]])).toBeUndefined();
+    for (const v of ["0", "1.5", "-5", "abc", "", " 5"])
+      expect(pluginTimeoutMs([["timeout", v]]), v).toBeUndefined();
+    expect(
+      pluginTimeoutMs([
+        ["timeout", "1000"],
+        ["timeout", "2000"],
+      ]),
+    ).toBeUndefined();
     expect(pluginTimeoutMs([["Timeout", "1000"]])).toBeUndefined();
   });
 });
