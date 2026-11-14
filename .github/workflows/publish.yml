@@ -72,6 +72,7 @@ jobs:
           path: |
             dist/
             package.json
+            CHANGELOG.md
             README.md
             LICENSE
             NOTICE

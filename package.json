@@ -21,6 +21,7 @@
   },
   "files": [
     "dist",
+    "CHANGELOG.md",
     "LICENSE",
     "NOTICE",
     "README.md"
@@ -30,7 +31,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs --dts --clean --target node20 --external cheerio --splitting",
+    "build": "tsup src/index.ts --format esm,cjs --dts --clean --target node22 --external cheerio --splitting",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:cov": "vitest run --coverage",
@@ -45,7 +46,7 @@
     "proxy",
     "sdk"
   ],
-  "author": "Scrape.do <opensource@scrape.do>",
+  "author": "Scrape.do <support@scrape.do>",
   "license": "Apache-2.0",
   "homepage": "https://scrape.do",
   "repository": {
@@ -54,6 +55,9 @@
   },
   "bugs": {
     "url": "https://github.com/scrape-do/sdo-sdk-js/issues"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "peerDependencies": {
     "cheerio": "^1.0.0"
