@@ -29,13 +29,15 @@ export function parseUsage(body: Uint8Array, token: string): Usage {
   const raw = parseJsonBody(body, "The usage response", token);
   const invalid = (why: string): SdoTransportError =>
     new SdoTransportError(`The usage response is not the expected JSON object: ${why}.`);
-  if (raw === null || typeof raw !== "object" || Array.isArray(raw)) throw invalid("not a JSON object");
+  if (raw === null || typeof raw !== "object" || Array.isArray(raw))
+    throw invalid("not a JSON object");
   const obj = raw as Record<string, unknown>;
   if (typeof obj.IsActive !== "boolean") throw invalid("IsActive is missing or not a boolean");
   const usage: Partial<Usage> = { isActive: obj.IsActive };
   for (const [wire, field] of COUNTS) {
     const v = obj[wire];
-    if (typeof v !== "number" || !Number.isSafeInteger(v)) throw invalid(`${wire} is missing or not an integer`);
+    if (typeof v !== "number" || !Number.isSafeInteger(v))
+      throw invalid(`${wire} is missing or not an integer`);
     usage[field] = v;
   }
   return usage as Usage;

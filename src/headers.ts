@@ -24,9 +24,12 @@ export function checkHeaders(headers: unknown, what = "headers"): HeaderMap {
     headers.forEach((value, name) => {
       entries.push([name, value]);
     });
-  }
-  else if (typeof headers === "object" && !Array.isArray(headers)) entries = Object.entries(headers);
-  else throw new SdoConfigError(`${what} must be a plain object mapping header names to string values.`);
+  } else if (typeof headers === "object" && !Array.isArray(headers))
+    entries = Object.entries(headers);
+  else
+    throw new SdoConfigError(
+      `${what} must be a plain object mapping header names to string values.`,
+    );
   const out: HeaderMap = {};
   for (const [name, value] of entries) {
     if (!NAME.test(name)) {
@@ -36,7 +39,9 @@ export function checkHeaders(headers: unknown, what = "headers"): HeaderMap {
       );
     }
     if (FORBIDDEN.has(name.toLowerCase())) {
-      throw new SdoConfigError(`The '${name}' header is managed by the HTTP layer and cannot be set.`);
+      throw new SdoConfigError(
+        `The '${name}' header is managed by the HTTP layer and cannot be set.`,
+      );
     }
     // The value is not echoed: it may be a credential.
     if (typeof value !== "string" || !VALUE.test(value)) {
@@ -54,7 +59,9 @@ export function checkHeaders(headers: unknown, what = "headers"): HeaderMap {
 export function mergeHeaders(...maps: ReadonlyArray<HeaderMap | undefined>): HeaderMap {
   const byName = new Map<string, readonly [string, string]>();
   for (const map of maps) {
-    if (map) for (const [name, value] of Object.entries(map)) byName.set(name.toLowerCase(), [name, value]);
+    if (map)
+      for (const [name, value] of Object.entries(map))
+        byName.set(name.toLowerCase(), [name, value]);
   }
   return Object.fromEntries(byName.values());
 }

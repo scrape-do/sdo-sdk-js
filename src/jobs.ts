@@ -54,7 +54,15 @@ export interface JobStatus {
 }
 
 /** The job statuses the API documents (also the `status` filter of `list`). */
-export const JOB_STATUSES = ["queuing", "queued", "pending", "rotating", "success", "error", "canceled"] as const;
+export const JOB_STATUSES = [
+  "queuing",
+  "queued",
+  "pending",
+  "rotating",
+  "success",
+  "error",
+  "canceled",
+] as const;
 export type JobStatusValue = (typeof JOB_STATUSES)[number];
 
 /** The sort orders `list` accepts; `start_time_desc` (newest first) is the API default. */
@@ -107,7 +115,9 @@ const str = (raw: Raw, key: string): string | undefined =>
 const num = (raw: Raw, key: string): number | undefined =>
   typeof raw[key] === "number" ? (raw[key] as number) : undefined;
 const strings = (raw: Raw, key: string): string[] =>
-  Array.isArray(raw[key]) ? (raw[key] as unknown[]).filter((v): v is string => typeof v === "string") : [];
+  Array.isArray(raw[key])
+    ? (raw[key] as unknown[]).filter((v): v is string => typeof v === "string")
+    : [];
 const objects = (raw: Raw, key: string): Raw[] =>
   Array.isArray(raw[key]) ? (raw[key] as unknown[]).filter(isObject) : [];
 
@@ -206,7 +216,9 @@ function toJobStatus(raw: Raw): JobStatus {
 
 function validateId(id: unknown, what: string): string {
   if (typeof id !== "string" || !ID_PATTERN.test(id)) {
-    throw new SdoConfigError(`Invalid ${what} ${JSON.stringify(id)}: expected 1-128 of A-Z a-z 0-9 _ -.`);
+    throw new SdoConfigError(
+      `Invalid ${what} ${JSON.stringify(id)}: expected 1-128 of A-Z a-z 0-9 _ -.`,
+    );
   }
   // Already path-safe; encoding is defence in depth.
   return encodeURIComponent(id);
@@ -218,12 +230,21 @@ function timestamp(value: unknown, what: string): string {
     return value.toISOString().replace(/\.\d{3}Z$/, "Z");
   }
   if (typeof value === "string" && RFC3339.test(value)) return value;
-  throw new SdoConfigError(`${what} must be a Date or an RFC 3339 string such as 2025-01-01T00:00:00Z.`);
+  throw new SdoConfigError(
+    `${what} must be a Date or an RFC 3339 string such as 2025-01-01T00:00:00Z.`,
+  );
 }
 
 function positiveInt(value: unknown, what: string, max?: number): string {
-  if (typeof value !== "number" || !Number.isInteger(value) || value < 1 || (max !== undefined && value > max)) {
-    throw new SdoConfigError(`${what} must be an integer from 1${max === undefined ? " up" : ` to ${max}`}.`);
+  if (
+    typeof value !== "number" ||
+    !Number.isInteger(value) ||
+    value < 1 ||
+    (max !== undefined && value > max)
+  ) {
+    throw new SdoConfigError(
+      `${what} must be an integer from 1${max === undefined ? " up" : ` to ${max}`}.`,
+    );
   }
   return String(value);
 }
@@ -235,14 +256,16 @@ function listQuery(input: ListJobsOptions | undefined): string {
   const options: ListJobsOptions = input;
   const q = new URLSearchParams();
   if (options.page !== undefined) q.set("page", positiveInt(options.page, "page"));
-  if (options.pageSize !== undefined) q.set("page_size", positiveInt(options.pageSize, "pageSize", 100));
+  if (options.pageSize !== undefined)
+    q.set("page_size", positiveInt(options.pageSize, "pageSize", 100));
   if (options.status !== undefined) {
     if (!(JOB_STATUSES as readonly unknown[]).includes(options.status)) {
       throw new SdoConfigError(`status must be one of ${JOB_STATUSES.join(", ")}.`);
     }
     q.set("status", options.status);
   }
-  if (options.startFrom !== undefined) q.set("start_from", timestamp(options.startFrom, "startFrom"));
+  if (options.startFrom !== undefined)
+    q.set("start_from", timestamp(options.startFrom, "startFrom"));
   if (options.startTo !== undefined) q.set("start_to", timestamp(options.startTo, "startTo"));
   if (options.sort !== undefined) {
     if (!(JOB_SORTS as readonly unknown[]).includes(options.sort)) {
@@ -257,7 +280,8 @@ function listQuery(input: ListJobsOptions | undefined): string {
 /** The signal of a CallOptions argument (validated). */
 export function callSignal(options: CallOptions | undefined): AbortSignal | undefined {
   if (options === undefined || options === null) return undefined;
-  if (typeof options !== "object") throw new SdoConfigError("Call options must be an object such as { signal }.");
+  if (typeof options !== "object")
+    throw new SdoConfigError("Call options must be an object such as { signal }.");
   return checkSignal(options.signal);
 }
 
@@ -311,7 +335,12 @@ export class JobsClient implements AsyncJobs {
     this.#transport = transport;
   }
 
-  #call(method: string, path: string, call: CallOptions | undefined, body?: unknown): Promise<HttpResponse> {
+  #call(
+    method: string,
+    path: string,
+    call: CallOptions | undefined,
+    body?: unknown,
+  ): Promise<HttpResponse> {
     const signal = callSignal(call);
     const headers: Record<string, string> = { "X-Token": this.#token };
     let bytes: Uint8Array | undefined;
@@ -330,15 +359,29 @@ export class JobsClient implements AsyncJobs {
     });
   }
 
-  async #object(method: string, path: string, call: CallOptions | undefined, body?: unknown): Promise<Raw> {
+  async #object(
+    method: string,
+    path: string,
+    call: CallOptions | undefined,
+    body?: unknown,
+  ): Promise<Raw> {
     const resp = await this.#call(method, path, call, body);
     const parsed = parseJsonBody(resp.body, "The async API response", this.#token);
-    if (!isObject(parsed)) throw new SdoTransportError("The async API response is JSON but not an object.");
+    if (!isObject(parsed))
+      throw new SdoTransportError("The async API response is JSON but not an object.");
     return parsed;
   }
 
-  async create(targets: string[], options: Record<string, unknown> = {}, call?: CallOptions): Promise<Job> {
-    if (!Array.isArray(targets) || targets.length === 0 || !targets.every((t) => typeof t === "string")) {
+  async create(
+    targets: string[],
+    options: Record<string, unknown> = {},
+    call?: CallOptions,
+  ): Promise<Job> {
+    if (
+      !Array.isArray(targets) ||
+      targets.length === 0 ||
+      !targets.every((t) => typeof t === "string")
+    ) {
       throw new SdoConfigError("create() needs a non-empty array of target URLs.");
     }
     return this.#create({ Targets: targets }, options, "create", call);
@@ -351,12 +394,17 @@ export class JobsClient implements AsyncJobs {
     call?: CallOptions,
   ): Promise<Job> {
     if (typeof key !== "string" || !PLUGIN_KEY.test(key)) {
-      throw new SdoConfigError(`Invalid plugin key ${JSON.stringify(key)}: expected a plugin path such as amazon/pdp.`);
+      throw new SdoConfigError(
+        `Invalid plugin key ${JSON.stringify(key)}: expected a plugin path such as amazon/pdp.`,
+      );
     }
     if (!Array.isArray(params) || params.length === 0 || params.length > MAX_PLUGIN_PARAMS) {
-      throw new SdoConfigError(`A plugin job needs 1 to ${MAX_PLUGIN_PARAMS} params entries (one per task).`);
+      throw new SdoConfigError(
+        `A plugin job needs 1 to ${MAX_PLUGIN_PARAMS} params entries (one per task).`,
+      );
     }
-    if (!params.every(isObject)) throw new SdoConfigError("Every plugin params entry must be a plain object.");
+    if (!params.every(isObject))
+      throw new SdoConfigError("Every plugin params entry must be a plain object.");
     return this.#create({ Plugin: { Key: key, Params: params } }, options, "createPlugin", call);
   }
 
@@ -375,11 +423,17 @@ export class JobsClient implements AsyncJobs {
       );
     }
     const raw = await this.#object("POST", "/api/v1/jobs", call, { ...options, ...source });
-    return { jobId: str(raw, "JobID"), message: str(raw, "Message"), taskIds: strings(raw, "TaskIDs") };
+    return {
+      jobId: str(raw, "JobID"),
+      message: str(raw, "Message"),
+      taskIds: strings(raw, "TaskIDs"),
+    };
   }
 
   async status(jobId: string, call?: CallOptions): Promise<JobStatus> {
-    return toJobStatus(await this.#object("GET", `/api/v1/jobs/${validateId(jobId, "job id")}`, call));
+    return toJobStatus(
+      await this.#object("GET", `/api/v1/jobs/${validateId(jobId, "job id")}`, call),
+    );
   }
 
   async result(jobId: string, taskId: string, call?: CallOptions): Promise<TaskResult> {

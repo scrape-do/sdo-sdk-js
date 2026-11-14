@@ -101,7 +101,8 @@ class Output {
   }
 }
 
-const lookup = (t: Uint32Array, pointer: number): number => (pointer >= 0 && pointer < t.length ? t[pointer]! : 0);
+const lookup = (t: Uint32Array, pointer: number): number =>
+  pointer >= 0 && pointer < t.length ? t[pointer]! : 0;
 
 function eucKr(bytes: Uint8Array, t: Uint32Array): string {
   const out = new Output(bytes.length);
@@ -140,7 +141,10 @@ function big5(bytes: Uint8Array, t: Uint32Array): string {
   for (const b of bytes) {
     if (lead !== 0) {
       const offset = b < 0x7f ? 0x40 : 0x62;
-      const pointer = (b >= 0x40 && b <= 0x7e) || (b >= 0xa1 && b <= 0xfe) ? (lead - 0x81) * 157 + (b - offset) : -1;
+      const pointer =
+        (b >= 0x40 && b <= 0x7e) || (b >= 0xa1 && b <= 0xfe)
+          ? (lead - 0x81) * 157 + (b - offset)
+          : -1;
       lead = 0;
       const pair = BIG5_PAIRS.get(pointer);
       const cp = lookup(t, pointer);
@@ -168,7 +172,10 @@ function shiftJis(bytes: Uint8Array, t: Uint32Array): string {
     if (lead !== 0) {
       const offset = b < 0x7f ? 0x40 : 0x41;
       const leadOffset = lead < 0xa0 ? 0x81 : 0xc1;
-      const pointer = (b >= 0x40 && b <= 0x7e) || (b >= 0x80 && b <= 0xfc) ? (lead - leadOffset) * 188 + b - offset : -1;
+      const pointer =
+        (b >= 0x40 && b <= 0x7e) || (b >= 0x80 && b <= 0xfc)
+          ? (lead - leadOffset) * 188 + b - offset
+          : -1;
       lead = 0;
       const cp = pointer >= 8836 && pointer <= 10715 ? 0xe000 - 8836 + pointer : lookup(t, pointer);
       if (cp !== 0) {

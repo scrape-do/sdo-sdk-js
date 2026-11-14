@@ -7,41 +7,41 @@
 //   console.log(result.statusCode, result.text.slice(0, 200));
 export { Client, type ClientOptions } from "./client.js";
 export { ScrapeConfig, type ScrapeOptions } from "./config.js";
-export type { RequestOptions } from "./request.js";
-export { ScrapeResult, type ScrapeResultInit } from "./response.js";
-export type { Usage } from "./usage.js";
+export {
+  type ApiErrorOptions,
+  redactSecrets,
+  SdoAbortError,
+  SdoApiError,
+  SdoAuthError,
+  SdoConcurrencyError,
+  SdoConfigError,
+  SdoConnectionError,
+  SdoError,
+  type SdoErrorOptions,
+  SdoGatewayError,
+  SdoResponseTooLargeError,
+  SdoTimeoutError,
+  SdoTransportError,
+  SdoValidationError,
+} from "./errors.js";
 export type { FetchLike } from "./http.js";
 export {
-  TaskResult,
-  JOB_STATUSES,
-  JOB_SORTS,
-  MAX_PLUGIN_PARAMS,
+  type Account,
   type AsyncJobs,
   type CallOptions,
+  JOB_SORTS,
+  JOB_STATUSES,
   type Job,
   type JobPage,
   type JobSort,
   type JobStatus,
   type JobStatusValue,
   type ListJobsOptions,
+  MAX_PLUGIN_PARAMS,
   type Task,
-  type Account,
+  TaskResult,
 } from "./jobs.js";
+export type { RequestOptions } from "./request.js";
+export { ScrapeResult, type ScrapeResultInit } from "./response.js";
+export type { Usage } from "./usage.js";
 export { VERSION } from "./version.js";
-export {
-  SdoError,
-  SdoConfigError,
-  SdoTransportError,
-  SdoConnectionError,
-  SdoTimeoutError,
-  SdoResponseTooLargeError,
-  SdoAbortError,
-  SdoApiError,
-  SdoAuthError,
-  SdoValidationError,
-  SdoConcurrencyError,
-  SdoGatewayError,
-  redactSecrets,
-  type SdoErrorOptions,
-  type ApiErrorOptions,
-} from "./errors.js";

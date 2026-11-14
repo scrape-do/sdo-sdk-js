@@ -31,7 +31,14 @@ describe("ScrapeConfig", () => {
   });
 
   it("uses camelCase wire names", () => {
-    const d = dict(new ScrapeConfig(U, { geoCode: "us", returnJson: true, setCookies: "a=b", sessionId: "1234" }));
+    const d = dict(
+      new ScrapeConfig(U, {
+        geoCode: "us",
+        returnJson: true,
+        setCookies: "a=b",
+        sessionId: "1234",
+      }),
+    );
     expect(d.geoCode).toBe("us");
     expect(d.returnJSON).toBe("true");
     expect(d.setCookies).toBe("a=b");
@@ -55,28 +62,40 @@ describe("ScrapeConfig", () => {
   // blockResources is tri-state: unset sends nothing (the gateway default,
   // true, applies), true is render-only, and false is sent so resources load.
   it("sends blockResources false, which needs no render", () => {
-    expect(dict(new ScrapeConfig(U, { render: true, blockResources: false })).blockResources).toBe("false");
+    expect(dict(new ScrapeConfig(U, { render: true, blockResources: false })).blockResources).toBe(
+      "false",
+    );
     expect(new ScrapeConfig(U, { blockResources: false }).toParams()).toEqual([
       ["url", U],
       ["blockResources", "false"],
     ]);
     expect(dict(new ScrapeConfig(U, { render: true }))).not.toHaveProperty("blockResources");
-    expect(dict(new ScrapeConfig(U, { render: true, blockResources: undefined }))).not.toHaveProperty("blockResources");
+    expect(
+      dict(new ScrapeConfig(U, { render: true, blockResources: undefined })),
+    ).not.toHaveProperty("blockResources");
     expect(() => new ScrapeConfig(U, { blockResources: true })).toThrow(SdoConfigError);
-    expect(() => new ScrapeConfig(U, { blockResources: "false" as unknown as boolean })).toThrow(SdoConfigError);
+    expect(() => new ScrapeConfig(U, { blockResources: "false" as unknown as boolean })).toThrow(
+      SdoConfigError,
+    );
   });
 
   it("serializes playWithBrowser as JSON", () => {
-    const d = dict(new ScrapeConfig(U, { render: true, playWithBrowser: [{ action: "click", css: "#x" }] }));
+    const d = dict(
+      new ScrapeConfig(U, { render: true, playWithBrowser: [{ action: "click", css: "#x" }] }),
+    );
     expect(d.playWithBrowser).toBe('[{"action":"click","css":"#x"}]');
   });
 
   it("rejects invalid enums", () => {
-    expect(() => new ScrapeConfig(U, { device: "watch" as never }).toParams()).toThrow(SdoConfigError);
-    expect(() => new ScrapeConfig(U, { output: "pdf" as never }).toParams()).toThrow(SdoConfigError);
-    expect(() => new ScrapeConfig(U, { render: true, waitUntil: "whenever" as never }).toParams()).toThrow(
+    expect(() => new ScrapeConfig(U, { device: "watch" as never }).toParams()).toThrow(
       SdoConfigError,
     );
+    expect(() => new ScrapeConfig(U, { output: "pdf" as never }).toParams()).toThrow(
+      SdoConfigError,
+    );
+    expect(() =>
+      new ScrapeConfig(U, { render: true, waitUntil: "whenever" as never }).toParams(),
+    ).toThrow(SdoConfigError);
   });
 
   it("supports the extraParams escape hatch", () => {

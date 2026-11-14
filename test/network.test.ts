@@ -23,7 +23,11 @@ import { withServer } from "./server.js";
 const TARGET = "https://e.com";
 
 /** A TCP server that accepts connections and never answers (not even TLS). */
-async function silentServer(): Promise<{ port: number; connections: () => number; close(): Promise<void> }> {
+async function silentServer(): Promise<{
+  port: number;
+  connections: () => number;
+  close(): Promise<void>;
+}> {
   const sockets: net.Socket[] = [];
   const server = net.createServer((s) => void sockets.push(s));
   await new Promise<void>((r) => server.listen(0, "127.0.0.1", r));
@@ -63,22 +67,30 @@ describe("retries happen only before the request is sent", () => {
   it("retries a refused connection for GET, never for POST", async () => {
     const url = `http://127.0.0.1:${await closedPort()}/`;
     const sleeps: number[] = [];
-    const get = await transport(sleeps).send({ method: "GET", url, token: "t", api: "sync" }).catch((e) => e);
+    const get = await transport(sleeps)
+      .send({ method: "GET", url, token: "t", api: "sync" })
+      .catch((e) => e);
     expect(get).toBeInstanceOf(SdoConnectionError);
     expect(sleeps).toHaveLength(2);
 
     const post: number[] = [];
     const body = new Uint8Array([1]);
-    await expect(transport(post).send({ method: "POST", url, token: "t", api: "sync", body })).rejects.toBeInstanceOf(
-      SdoConnectionError,
-    );
+    await expect(
+      transport(post).send({ method: "POST", url, token: "t", api: "sync", body }),
+    ).rejects.toBeInstanceOf(SdoConnectionError);
     expect(post).toHaveLength(0);
   });
 
   it("retries a connect that times out before TLS completes (nothing was sent)", async () => {
     const silent = await silentServer();
     try {
-      const client = new Client({ token: "t", retries: 1, backoffMs: 0, timeoutMs: 150, baseUrl: `https://127.0.0.1:${silent.port}` });
+      const client = new Client({
+        token: "t",
+        retries: 1,
+        backoffMs: 0,
+        timeoutMs: 150,
+        baseUrl: `https://127.0.0.1:${silent.port}`,
+      });
       await expect(client.scrape(TARGET)).rejects.toBeInstanceOf(SdoTimeoutError);
       expect(silent.connections()).toBe(2);
       // A POST is never retried, sent or not.
@@ -94,7 +106,13 @@ describe("retries happen only before the request is sent", () => {
     withServer(
       () => undefined, // received, never answered
       async (server) => {
-        const client = new Client({ token: "t", retries: 2, backoffMs: 0, timeoutMs: 150, baseUrl: server.url });
+        const client = new Client({
+          token: "t",
+          retries: 2,
+          backoffMs: 0,
+          timeoutMs: 150,
+          baseUrl: server.url,
+        });
         const err = await client.scrape(TARGET).catch((e) => e);
         expect(err).toBeInstanceOf(SdoTimeoutError);
         expect(err.message).toContain("150 ms");
@@ -110,7 +128,13 @@ describe("retries happen only before the request is sent", () => {
         if (req.url.includes("drop")) setTimeout(() => res.destroy(), 10);
       },
       async (server) => {
-        const client = new Client({ token: "t", retries: 2, backoffMs: 0, timeoutMs: 200, baseUrl: server.url });
+        const client = new Client({
+          token: "t",
+          retries: 2,
+          backoffMs: 0,
+          timeoutMs: 200,
+          baseUrl: server.url,
+        });
         await expect(client.scrape(TARGET)).rejects.toBeInstanceOf(SdoTimeoutError);
         await expect(client.scrape(`${TARGET}/drop`)).rejects.toBeInstanceOf(SdoConnectionError);
         expect(server.requests).toHaveLength(2);
@@ -138,7 +162,8 @@ describe("retries happen only before the request is sent", () => {
 });
 
 describe("the per-attempt deadline follows the gateway timeout", () => {
-  const slow = (_req: unknown, res: { end(b: string): void }) => void setTimeout(() => res.end("late"), 300);
+  const slow = (_req: unknown, res: { end(b: string): void }) =>
+    void setTimeout(() => res.end("late"), 300);
 
   it("waits for a gateway timeout longer than the client's", () =>
     withServer(slow, async (server) => {
@@ -172,20 +197,34 @@ describe("the caller's AbortSignal", () => {
         res.end();
       },
       async (server) => {
-        const client = new Client({ token: "t", retries: 2, backoffMs: 10_000, baseUrl: server.url });
+        const client = new Client({
+          token: "t",
+          retries: 2,
+          backoffMs: 10_000,
+          baseUrl: server.url,
+        });
         const controller = new AbortController();
         setTimeout(() => controller.abort(), 50);
         const started = Date.now();
-        await expect(client.scrape(TARGET, { signal: controller.signal })).rejects.toBeInstanceOf(SdoAbortError);
+        await expect(client.scrape(TARGET, { signal: controller.signal })).rejects.toBeInstanceOf(
+          SdoAbortError,
+        );
         expect(Date.now() - started).toBeLessThan(5000);
         expect(server.requests).toHaveLength(1);
-        await expect(client.scrape(TARGET, { signal: AbortSignal.abort() })).rejects.toBeInstanceOf(SdoAbortError);
+        await expect(client.scrape(TARGET, { signal: AbortSignal.abort() })).rejects.toBeInstanceOf(
+          SdoAbortError,
+        );
         expect(server.requests).toHaveLength(1);
       },
     ));
 
   it("reaches plugins and every job call, and must be an AbortSignal", async () => {
-    const client = new Client({ token: "t", retries: 0, baseUrl: "http://127.0.0.1:9", asyncBaseUrl: "http://127.0.0.1:9" });
+    const client = new Client({
+      token: "t",
+      retries: 0,
+      baseUrl: "http://127.0.0.1:9",
+      asyncBaseUrl: "http://127.0.0.1:9",
+    });
     const call = { signal: AbortSignal.abort() };
     for (const p of [
       client.plugin("google/search", {}, call),
@@ -198,9 +237,13 @@ describe("the caller's AbortSignal", () => {
     ]) {
       await expect(p).rejects.toBeInstanceOf(SdoAbortError);
     }
-    await expect(client.scrape(TARGET, { signal: "soon" as never })).rejects.toBeInstanceOf(SdoConfigError);
+    await expect(client.scrape(TARGET, { signal: "soon" as never })).rejects.toBeInstanceOf(
+      SdoConfigError,
+    );
     await expect(client.jobs.me("x" as never)).rejects.toBeInstanceOf(SdoConfigError);
-    await expect(client.plugin("google/search", {}, { signal: {} as never })).rejects.toBeInstanceOf(SdoConfigError);
+    await expect(
+      client.plugin("google/search", {}, { signal: {} as never }),
+    ).rejects.toBeInstanceOf(SdoConfigError);
   });
 });
 
@@ -208,7 +251,10 @@ describe("statuses reach the SDK as they are", () => {
   it("returns a target 407 under transparentResponse and raises a plain 407 once", () =>
     withServer(
       (req, res) => {
-        res.writeHead(407, req.url.includes("transparentResponse") ? { "Scrape.do-Initial-Status-Code": "407" } : {});
+        res.writeHead(
+          407,
+          req.url.includes("transparentResponse") ? { "Scrape.do-Initial-Status-Code": "407" } : {},
+        );
         res.end("proxy auth");
       },
       async (server) => {
@@ -267,8 +313,12 @@ describe("decompression bombs are refused on every body path", () => {
             asyncBaseUrl: server.url,
           });
           await expect(client.scrape(TARGET)).rejects.toBeInstanceOf(SdoResponseTooLargeError);
-          await expect(client.plugin("google/search")).rejects.toBeInstanceOf(SdoResponseTooLargeError);
-          await expect(client.jobs.result("j", "t")).rejects.toBeInstanceOf(SdoResponseTooLargeError);
+          await expect(client.plugin("google/search")).rejects.toBeInstanceOf(
+            SdoResponseTooLargeError,
+          );
+          await expect(client.jobs.result("j", "t")).rejects.toBeInstanceOf(
+            SdoResponseTooLargeError,
+          );
           // An error body is read through its own small cap and the status still decides.
           const err = await client.scrape(`${TARGET}/fail`).catch((e) => e);
           expect(err).toBeInstanceOf(SdoGatewayError);
@@ -287,8 +337,14 @@ describe("decompression bombs are refused on every body path", () => {
         res.end(gz ? zlib.gzipSync(Buffer.alloc(size, 0x61)) : Buffer.alloc(size, 0x61));
       },
       async (server) => {
-        const client = new Client({ token: "t", retries: 0, maxResponseBytes: 4096, baseUrl: server.url });
-        const scrape = (q: string) => client.scrape(TARGET, { extraParams: { n: q.split(":")[1], k: q.split(":")[0] } });
+        const client = new Client({
+          token: "t",
+          retries: 0,
+          maxResponseBytes: 4096,
+          baseUrl: server.url,
+        });
+        const scrape = (q: string) =>
+          client.scrape(TARGET, { extraParams: { n: q.split(":")[1], k: q.split(":")[0] } });
         expect((await scrape("raw:4096")).bytes()).toHaveLength(4096);
         await expect(scrape("raw:4097")).rejects.toBeInstanceOf(SdoResponseTooLargeError);
         expect((await scrape("gz:4096")).bytes()).toHaveLength(4096);
@@ -307,7 +363,9 @@ describe("decompression bombs are refused on every body path", () => {
           .scrape(TARGET)
           .catch((e) => e);
         expect(err.constructor).toBe(SdoTransportError);
-        expect(err.message).toMatch(/^The response body could not be decoded \(Content-Encoding: br\)/);
+        expect(err.message).toMatch(
+          /^The response body could not be decoded \(Content-Encoding: br\)/,
+        );
         expect(server.requests).toHaveLength(1);
       },
     ));
@@ -325,7 +383,8 @@ describe("decompression bombs are refused on every body path", () => {
       },
       async (server) => {
         const client = new Client({ token: "t", retries: 2, backoffMs: 0, baseUrl: server.url });
-        const scrape = (n: number, path = "") => client.scrape(TARGET + path, { extraParams: { n: String(n) } });
+        const scrape = (n: number, path = "") =>
+          client.scrape(TARGET + path, { extraParams: { n: String(n) } });
         expect((await scrape(5)).text).toBe("hello");
         for (const n of [6, 2000]) {
           const err = await scrape(n).catch((e) => e);
@@ -344,7 +403,9 @@ describe("decompression bombs are refused on every body path", () => {
 describe("the test suite itself", () => {
   it("cannot reach a host outside the loopback interface", async () => {
     // .invalid never resolves (RFC 2606), so this cannot leave the machine either way.
-    const err = await new Client({ token: "t", retries: 0, baseUrl: "https://gw.invalid" }).scrape(TARGET).catch((e) => e);
+    const err = await new Client({ token: "t", retries: 0, baseUrl: "https://gw.invalid" })
+      .scrape(TARGET)
+      .catch((e) => e);
     expect(err.message).toContain("test network guard");
   });
 });
@@ -363,7 +424,10 @@ describe("the wait between attempts", () => {
       sleep: async (ms) => void sleeps.push(ms),
       fetchImpl: async () =>
         n++ === 0
-          ? new Response(null, { status: 429, headers: retryAfter === undefined ? {} : { "retry-after": retryAfter } })
+          ? new Response(null, {
+              status: 429,
+              headers: retryAfter === undefined ? {} : { "retry-after": retryAfter },
+            })
           : new Response("ok"),
     });
     await t.send({ method: "GET", url: "https://gw.test/", token: "t", api: "sync" });
@@ -392,7 +456,9 @@ describe("data after the end of a complete stream", () => {
           res.end(Buffer.concat([body, Buffer.from("\0\0garbage")]));
         },
         async (server) => {
-          expect((await new Client({ token: "t", retries: 0, baseUrl: server.url }).scrape(TARGET)).text).toBe("hello");
+          expect(
+            (await new Client({ token: "t", retries: 0, baseUrl: server.url }).scrape(TARGET)).text,
+          ).toBe("hello");
         },
       ));
   }

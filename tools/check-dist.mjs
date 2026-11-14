@@ -16,7 +16,16 @@
 // No network: the scrape uses a stub fetch. Runs on every supported Node.
 
 import { spawnSync } from "node:child_process";
-import { cpSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import {
+  cpSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -33,26 +42,41 @@ const check = (ok, message) => {
 // 1. Nothing vendored. Markers of a bundled dependency: a node_modules path,
 //    undici/cheerio internals, or a bundle far larger than the SDK itself.
 const MAX_BUNDLE_BYTES = 200 * 1024;
-const VENDOR_MARKERS = [/node_modules\//, /\bundici\b/i, /require\(["']cheerio["']\)\.load/, /htmlparser2|parse5/];
+const VENDOR_MARKERS = [
+  /node_modules\//,
+  /\bundici\b/i,
+  /require\(["']cheerio["']\)\.load/,
+  /htmlparser2|parse5/,
+];
 for (const file of readdirSync(dist)) {
   const path = join(dist, file);
   const text = readFileSync(path, "utf8");
-  for (const marker of VENDOR_MARKERS) check(!marker.test(text), `${file}: contains bundled code (${marker})`);
-  if (/\.(c?js)$/.test(file)) check(statSync(path).size < MAX_BUNDLE_BYTES, `${file}: larger than ${MAX_BUNDLE_BYTES} bytes`);
+  for (const marker of VENDOR_MARKERS)
+    check(!marker.test(text), `${file}: contains bundled code (${marker})`);
+  if (/\.(c?js)$/.test(file))
+    check(statSync(path).size < MAX_BUNDLE_BYTES, `${file}: larger than ${MAX_BUNDLE_BYTES} bytes`);
 }
 
 // 2. Runtime smoke test of both builds, loaded by package name (self-reference
 //    through the `exports` map, exactly as a consumer resolves it).
 const stubFetch = async (url) =>
   url.includes("korean")
-    ? new Response(Uint8Array.of(0x8c, 0x63), { headers: { "content-type": "text/html; charset=euc-kr" } })
-    : new Response("<p class='x'>hi</p>", { status: 200, headers: { "content-type": "text/html" } });
+    ? new Response(Uint8Array.of(0x8c, 0x63), {
+        headers: { "content-type": "text/html; charset=euc-kr" },
+      })
+    : new Response("<p class='x'>hi</p>", {
+        status: 200,
+        headers: { "content-type": "text/html" },
+      });
 async function smoke(label, sdk) {
   const client = new sdk.Client({ token: "smoke-token", fetchImpl: stubFetch, retries: 0 });
   const result = await client.scrape("https://example.com");
   check(result.text === "<p class='x'>hi</p>", `${label}: unexpected text`);
   const korean = await client.scrape("https://example.com/korean");
-  check(korean.text === "\uB620", `${label}: the CJK table chunk did not load (got ${JSON.stringify(korean.text)})`);
+  check(
+    korean.text === "\uB620",
+    `${label}: the CJK table chunk did not load (got ${JSON.stringify(korean.text)})`,
+  );
   const $ = await result.selector();
   check($("p.x").text() === "hi", `${label}: selector() did not load cheerio`);
   check(sdk.VERSION && typeof sdk.VERSION === "string", `${label}: VERSION missing`);
@@ -104,15 +128,25 @@ function typeCheck(dir, files, label) {
       files: Object.keys(files),
     }),
   );
-  const res = spawnSync(process.execPath, [tsc, "-p", join(dir, "tsconfig.json")], { cwd: dir, encoding: "utf8" });
-  check(res.status === 0, `type check of a node16 consumer ${label} failed:\n${res.stdout}${res.stderr}`);
+  const res = spawnSync(process.execPath, [tsc, "-p", join(dir, "tsconfig.json")], {
+    cwd: dir,
+    encoding: "utf8",
+  });
+  check(
+    res.status === 0,
+    `type check of a node16 consumer ${label} failed:\n${res.stdout}${res.stderr}`,
+  );
 }
 
 // 3a. Inside the repository, where cheerio is installed (a devDependency).
 const inside = join(root, ".apitmp", "consumer");
 rmSync(inside, { recursive: true, force: true });
 mkdirSync(inside, { recursive: true });
-typeCheck(inside, { "consumer.cts": consumer, "consumer.mts": consumer, "cheerio.mts": withCheerio }, "with cheerio");
+typeCheck(
+  inside,
+  { "consumer.cts": consumer, "consumer.mts": consumer, "cheerio.mts": withCheerio },
+  "with cheerio",
+);
 rmSync(inside, { recursive: true, force: true });
 
 // 3b. Outside it, with only this package installed: cheerio must not resolve.
@@ -128,7 +162,10 @@ try {
   } catch {
     cheerioVisible = false;
   }
-  check(!cheerioVisible, `${outside}: cheerio resolves there, so the no-cheerio check would prove nothing`);
+  check(
+    !cheerioVisible,
+    `${outside}: cheerio resolves there, so the no-cheerio check would prove nothing`,
+  );
   typeCheck(outside, { "consumer.cts": consumer, "consumer.mts": consumer }, "without cheerio");
 } finally {
   rmSync(outside, { recursive: true, force: true });

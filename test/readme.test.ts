@@ -13,7 +13,8 @@ const dir = new URL("./.readme/", import.meta.url);
 function answer(method: string, path: string): { type: string; body: string } {
   const json = (v: unknown) => ({ type: "application/json", body: JSON.stringify(v) });
   if (path.startsWith("/plugin/")) return json({ ok: true });
-  if (path === "/api/v1/jobs") return method === "POST" ? json({ JobID: "j-1", TaskIDs: ["t-1"] }) : json({ Jobs: [] });
+  if (path === "/api/v1/jobs")
+    return method === "POST" ? json({ JobID: "j-1", TaskIDs: ["t-1"] }) : json({ Jobs: [] });
   if (path === "/api/v1/me") return json({ AvaliableCredits: 5 });
   if (path === "/info") {
     return json({
@@ -24,7 +25,8 @@ function answer(method: string, path: string): { type: string; body: string } {
       RemainingMonthlyRequest: 2565023,
     });
   }
-  if (/^\/api\/v1\/jobs\/[^/]+\/[^/]+$/.test(path)) return json({ TaskID: "t-1", Content: "aGk=", Base64EncodedContent: true });
+  if (/^\/api\/v1\/jobs\/[^/]+\/[^/]+$/.test(path))
+    return json({ TaskID: "t-1", Content: "aGk=", Base64EncodedContent: true });
   if (path.startsWith("/api/v1/jobs/")) return json({ JobID: "j-1", Tasks: [{ TaskID: "t-1" }] });
   return { type: "text/html", body: "<html><h1>Example Domain</h1></html>" };
 }
@@ -52,9 +54,13 @@ describe("README samples", () => {
       const preamble = [
         /import \{[^}]*\bClient\b/.test(code) ? "" : 'import { Client } from "@scrape-do/sdk";',
         /\bconst client\b/.test(code) ? "" : 'const client = new Client({ token: "YOUR_TOKEN" });',
-        !/\bresult\./.test(code) || /\bconst result\b/.test(code) ? "" : 'const result = await client.scrape("https://example.com");',
+        !/\bresult\./.test(code) || /\bconst result\b/.test(code)
+          ? ""
+          : 'const result = await client.scrape("https://example.com");',
       ];
-      const source = [...preamble, code, "export {};"].join("\n").replaceAll('"@scrape-do/sdk"', '"../../src/index.js"');
+      const source = [...preamble, code, "export {};"]
+        .join("\n")
+        .replaceAll('"@scrape-do/sdk"', '"../../src/index.js"');
       mkdirSync(dir, { recursive: true });
       const file = new URL(`block-${i + 1}.ts`, dir);
       writeFileSync(file, source);

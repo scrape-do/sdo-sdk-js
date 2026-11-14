@@ -95,7 +95,11 @@ describe("Client", () => {
 
   it("calls a plugin and returns JSON", async () => {
     const fetchImpl = mockFetch(
-      () => new Response(JSON.stringify({ results: [1, 2] }), { status: 200, headers: { "Content-Type": "application/json" } }),
+      () =>
+        new Response(JSON.stringify({ results: [1, 2] }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
     );
     const client = new Client({ token: "t", fetchImpl });
     const data = await client.plugin("google/shopping", { q: "laptop", gl: "us" });

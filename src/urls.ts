@@ -35,7 +35,8 @@ function validPort(port: string): boolean {
 }
 
 function split(raw: unknown): Parts | undefined {
-  if (typeof raw !== "string" || FORBIDDEN_CHAR.test(raw) || LONE_SURROGATE.test(raw)) return undefined;
+  if (typeof raw !== "string" || FORBIDDEN_CHAR.test(raw) || LONE_SURROGATE.test(raw))
+    return undefined;
   const scheme = SCHEME.exec(raw);
   if (!scheme) return undefined;
   const after = raw.slice(scheme[0].length);
@@ -92,9 +93,15 @@ export function normalizeBaseUrl(raw: string, what: string, allowInsecureHttp: b
     );
   }
   if (parts.userinfo !== undefined || /[?#]/.test(parts.rest)) {
-    throw new SdoConfigError(`${what} must not carry credentials, a query or a fragment, got ${shown(raw)}.`);
+    throw new SdoConfigError(
+      `${what} must not carry credentials, a query or a fragment, got ${shown(raw)}.`,
+    );
   }
-  if (parts.scheme === "http" && !allowInsecureHttp && !LOOPBACK_HOSTS.has(parts.host.toLowerCase())) {
+  if (
+    parts.scheme === "http" &&
+    !allowInsecureHttp &&
+    !LOOPBACK_HOSTS.has(parts.host.toLowerCase())
+  ) {
     throw new SdoConfigError(
       `${what} must use https:// (the API token is sent with every request); plain http is only ` +
         `accepted for localhost, 127.0.0.1 and ::1, or with allowInsecureHttp: true. Got ${shown(raw)}.`,

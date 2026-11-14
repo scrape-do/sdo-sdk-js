@@ -17,7 +17,7 @@
 // Decoding streams: each stage pulls from the one before it, and the output of
 // every stage is bounded, so a small compressed payload cannot inflate a large
 // buffer before the size ceiling stops it.
-import { Readable, pipeline, type Transform } from "node:stream";
+import { pipeline, Readable, type Transform } from "node:stream";
 import zlib from "node:zlib";
 import { trimChars } from "./headers.js";
 
@@ -44,7 +44,8 @@ function isZlibHeader(head: Uint8Array): boolean {
 const DECODERS: Readonly<Record<string, (head: Uint8Array) => Transform>> = {
   gzip: () => zlib.createGunzip(),
   "x-gzip": () => zlib.createGunzip(),
-  deflate: (head) => (head.length >= 2 && isZlibHeader(head) ? zlib.createInflate() : zlib.createInflateRaw()),
+  deflate: (head) =>
+    head.length >= 2 && isZlibHeader(head) ? zlib.createInflate() : zlib.createInflateRaw(),
   br: () => zlib.createBrotliDecompress(),
 };
 
@@ -61,7 +62,11 @@ function concat(chunks: Uint8Array[]): Uint8Array {
   return out;
 }
 
-async function* stage(source: ByteSource, create: (head: Uint8Array) => Transform, limit: number): ByteSource {
+async function* stage(
+  source: ByteSource,
+  create: (head: Uint8Array) => Transform,
+  limit: number,
+): ByteSource {
   const it = source[Symbol.asyncIterator]();
   // Peek at the first bytes: an empty input decodes to nothing, and deflate
   // picks its wrapper from the first two bytes.
@@ -116,7 +121,11 @@ export const MAX_CONTENT_CODINGS = 5;
  * bytes (StageTooLarge). Stream errors of a decoder propagate as they are; a
  * chain longer than MAX_CONTENT_CODINGS fails on the first read.
  */
-export function decodeBody(body: ByteSource, codings: readonly string[], limit: number): ByteSource {
+export function decodeBody(
+  body: ByteSource,
+  codings: readonly string[],
+  limit: number,
+): ByteSource {
   const decoders: Array<(head: Uint8Array) => Transform> = [];
   for (const coding of codings) {
     if (coding === "identity") continue;

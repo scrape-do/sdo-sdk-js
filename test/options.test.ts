@@ -26,7 +26,10 @@ describe("unknown option names are refused", () => {
   };
 
   it("in ScrapeConfig, with a hint for snake_case and wire names", () => {
-    const msg = thrown(() => new ScrapeConfig(TARGET, { geo_code: "us", super: true, renderr: true } as ScrapeOptions));
+    const msg = thrown(
+      () =>
+        new ScrapeConfig(TARGET, { geo_code: "us", super: true, renderr: true } as ScrapeOptions),
+    );
     expect(msg).toContain("'geo_code' (did you mean 'geoCode'?)");
     expect(msg).toContain("'super' (did you mean 'superProxy'?)");
     expect(msg).toContain("'renderr'");
@@ -38,25 +41,31 @@ describe("unknown option names are refused", () => {
     const client = new Client({ token: "t", fetchImpl: f });
     const options = { waitSelector: "#x", body: "x" } as ScrapeOptions;
     await expect(client.scrape(TARGET, options)).rejects.toThrow("'body'");
-    await expect(client.scrape(new ScrapeConfig(TARGET), { render: true } as never)).rejects.toThrow(
-      "Scrape parameters belong in the ScrapeConfig",
-    );
+    await expect(
+      client.scrape(new ScrapeConfig(TARGET), { render: true } as never),
+    ).rejects.toThrow("Scrape parameters belong in the ScrapeConfig");
     await expect(client.scrape(TARGET, null as never)).resolves.toBeDefined();
     await expect(client.scrape(TARGET, "x" as never)).rejects.toBeInstanceOf(SdoConfigError);
     expect(f.calls).toHaveLength(1);
   });
 
   it("in ClientOptions", () => {
-    expect(thrown(() => new Client({ token: "t", maxRetries: 3 } as never))).toContain("'maxRetries'");
+    expect(thrown(() => new Client({ token: "t", maxRetries: 3 } as never))).toContain(
+      "'maxRetries'",
+    );
     expect(thrown(() => new Client({ token: "t", max_response_bytes: 1 } as never))).toContain(
       "(did you mean 'maxResponseBytes'?)",
     );
     expect(() => new Client({ token: "t", fetchImpl: "fetch" as never })).toThrow(SdoConfigError);
-    expect(() => new Client({ token: "t", acceptEncoding: "gzip\r\nX-A: 1" })).toThrow(SdoConfigError);
+    expect(() => new Client({ token: "t", acceptEncoding: "gzip\r\nX-A: 1" })).toThrow(
+      SdoConfigError,
+    );
   });
 
   it("including an empty extraParams key", () => {
-    expect(() => new ScrapeConfig(TARGET, { extraParams: { "": "x" } })).toThrow("extraParams keys cannot be empty");
+    expect(() => new ScrapeConfig(TARGET, { extraParams: { "": "x" } })).toThrow(
+      "extraParams keys cannot be empty",
+    );
   });
 
   it("but a later edit to the config's options is still validated", () => {
@@ -105,14 +114,20 @@ describe("request headers", () => {
   });
 
   it("are validated in ScrapeConfig too", () => {
-    expect(() => new ScrapeConfig(TARGET, { headers: { "Bad Name": "x" } })).toThrow(SdoConfigError);
+    expect(() => new ScrapeConfig(TARGET, { headers: { "Bad Name": "x" } })).toThrow(
+      SdoConfigError,
+    );
   });
 
   it("replace the SDK's own on the fetch path as well", async () => {
     const f = mockFetch(ok);
-    await new Client({ token: "t", fetchImpl: f }).scrape(TARGET, { headers: { "accept-encoding": "identity" } });
+    await new Client({ token: "t", fetchImpl: f }).scrape(TARGET, {
+      headers: { "accept-encoding": "identity" },
+    });
     const sent = f.calls[0]!.init!.headers as Record<string, string>;
-    expect(Object.keys(sent).filter((k) => k.toLowerCase() === "accept-encoding")).toEqual(["accept-encoding"]);
+    expect(Object.keys(sent).filter((k) => k.toLowerCase() === "accept-encoding")).toEqual([
+      "accept-encoding",
+    ]);
     expect(header(f.calls[0]!.init, "accept-encoding")).toBe("identity");
   });
 });
@@ -129,7 +144,14 @@ describe("URLs", () => {
   });
 
   it("refuse malformed authorities in target URLs", () => {
-    for (const url of ["https://[::1", "https://[::1]x/", "https://e.com:/", "https://e.com:8a/", "https://e .com", 7]) {
+    for (const url of [
+      "https://[::1",
+      "https://[::1]x/",
+      "https://e.com:/",
+      "https://e.com:8a/",
+      "https://e .com",
+      7,
+    ]) {
       expect(() => new ScrapeConfig(url as string), String(url)).toThrow(SdoConfigError);
     }
     expect(() => new ScrapeConfig("https://e.com/\ud800")).toThrow(SdoConfigError);
@@ -142,21 +164,29 @@ describe("JSON", () => {
     let deep: unknown = 1;
     for (let i = 0; i < 20_000; i++) deep = [deep];
     expect(() => canonicalJson(deep)).toThrow(SdoConfigError);
-    expect(() => canonicalJson({ toJSON: () => { throw new TypeError("boom"); } })).toThrow(TypeError);
+    expect(() =>
+      canonicalJson({
+        toJSON: () => {
+          throw new TypeError("boom");
+        },
+      }),
+    ).toThrow(TypeError);
   });
 
   it("parses deeply nested bodies and rejects overflow anywhere inside", () => {
     const deep = `${"[".repeat(5000)}1${"]".repeat(5000)}`;
     expect(() => parseJsonBody(new TextEncoder().encode(deep), "x")).not.toThrow();
-    expect(() => parseJsonBody(new TextEncoder().encode('{"a":[{"b":1e999}]}'), "The body")).toThrow(
-      new SdoTransportError("The body is not valid JSON: a number overflows a double."),
-    );
+    expect(() =>
+      parseJsonBody(new TextEncoder().encode('{"a":[{"b":1e999}]}'), "The body"),
+    ).toThrow(new SdoTransportError("The body is not valid JSON: a number overflows a double."));
   });
 });
 
 describe("version", () => {
   it("matches package.json", () => {
-    const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")) as { version: string };
+    const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")) as {
+      version: string;
+    };
     expect(VERSION).toBe(pkg.version);
   });
 });
