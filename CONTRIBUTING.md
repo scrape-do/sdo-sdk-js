@@ -42,9 +42,10 @@ npm test               # vitest — full unit + conformance suite
 npm run typecheck      # tsc --noEmit
 npm run build          # tsup — ESM + CJS + .d.ts in dist/
 npm run check:dist     # the built package: nothing vendored, ESM/CJS/types all load
+npm run lint           # biome ci — formatting, lint rules and import order
 ```
 
-All four must pass on a clean clone. If they don't, open an issue before doing anything else.
+All five must pass on a clean clone. If they don't, open an issue before doing anything else.
 
 ### Useful commands
 
@@ -58,6 +59,8 @@ All four must pass on a clean clone. If they don't, open an issue before doing a
 | `npm run test:cov` | Tests with the coverage floor (99% lines, branches, functions, statements) |
 | `npm run check:dist` | Check the built package (run after `npm run build`) |
 | `npm run api:surface` | Regenerate `api-surface.txt`, the public API golden CI diffs against |
+| `npm run lint` | Check formatting, lint rules and import order with Biome (`biome ci .`) |
+| `npm run format` | Apply Biome's formatting, import order and safe lint fixes |
 
 ## Test-driven development
 
@@ -98,7 +101,7 @@ If a conformance test fails after you pull `main`, the corpus moved under you: u
 - **No telemetry, ever.** Don't add analytics, crash reporting, "anonymous usage stats," update checks, or any outbound call that isn't a scrape request the user explicitly made.
 - **No UI.** This package is a library. No CLI entry point, no web server, no dashboard. (The `sdo` CLI lives in [sdo-cli](https://github.com/scrape-do/sdo-cli); the MCP server is [sdo-mcp](https://github.com/scrape-do/sdo-mcp), and the same server also ships inside the CLI as `sdo mcp serve`.)
 - **Keep dependencies lean.** New runtime dependencies need a justification in the PR. We favor Node's built-in modules (`node:http`, `node:https`, `node:zlib`, `URL`, `AbortController`) over packages: the default transport is `node:http` / `node:https`, and `fetch` is used only when a caller passes `fetchImpl`.
-- **Match the existing style.** Don't reformat unrelated code or sneak in drive-by refactors; keep the diff scoped to the change.
+- **Biome formats and lints.** `npm run lint` checks formatting, Biome's recommended lint rules and import order; `npm run format` applies them. The configuration is `biome.json` (2-space indent, 100 columns; Markdown and YAML are not formatted). `noNonNullAssertion` is off because `tsconfig.json` sets `noUncheckedIndexedAccess`: a `!` after an index the code has just checked is the idiom. Don't loosen a rule to get a PR through: fix the code, or justify a `biome-ignore` comment on the line. Don't sneak in drive-by refactors; keep the diff scoped to the change.
 
 ## Commit messages — Conventional Commits
 
@@ -158,6 +161,7 @@ Before you open a PR, confirm:
 - [ ] `npm test` passes — including the conformance suite.
 - [ ] `npx tsc --noEmit` passes with no errors.
 - [ ] `npm run build` succeeds.
+- [ ] `npm run lint` passes.
 - [ ] `test/conformance.json` was **not** edited.
 - [ ] If the public surface changed, `api-surface.txt` was regenerated (`npm run api:surface`) and the change is noted in CHANGELOG.md.
 - [ ] No telemetry, no UI, no new auth scheme was introduced.

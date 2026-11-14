@@ -20,7 +20,11 @@ const FORBIDDEN = new Set(["host", "content-length", "transfer-encoding", "conne
 export function checkHeaders(headers: unknown, what = "headers"): HeaderMap {
   if (headers === undefined || headers === null) return {};
   let entries: Array<[string, unknown]> = [];
-  if (headers instanceof Headers) headers.forEach((value, name) => entries.push([name, value]));
+  if (headers instanceof Headers) {
+    headers.forEach((value, name) => {
+      entries.push([name, value]);
+    });
+  }
   else if (typeof headers === "object" && !Array.isArray(headers)) entries = Object.entries(headers);
   else throw new SdoConfigError(`${what} must be a plain object mapping header names to string values.`);
   const out: HeaderMap = {};

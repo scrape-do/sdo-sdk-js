@@ -146,7 +146,7 @@ describe("JSON", () => {
   });
 
   it("parses deeply nested bodies and rejects overflow anywhere inside", () => {
-    const deep = "[".repeat(5000) + "1" + "]".repeat(5000);
+    const deep = `${"[".repeat(5000)}1${"]".repeat(5000)}`;
     expect(() => parseJsonBody(new TextEncoder().encode(deep), "x")).not.toThrow();
     expect(() => parseJsonBody(new TextEncoder().encode('{"a":[{"b":1e999}]}'), "The body")).toThrow(
       new SdoTransportError("The body is not valid JSON: a number overflows a double."),

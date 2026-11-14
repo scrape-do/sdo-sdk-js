@@ -7,10 +7,10 @@
 //   console.log(result.statusCode, result.text.slice(0, 200));
 export { Client, type ClientOptions } from "./client.js";
 export { ScrapeConfig, type ScrapeOptions } from "./config.js";
-export { type RequestOptions } from "./request.js";
+export type { RequestOptions } from "./request.js";
 export { ScrapeResult, type ScrapeResultInit } from "./response.js";
-export { type Usage } from "./usage.js";
-export { type FetchLike } from "./http.js";
+export type { Usage } from "./usage.js";
+export type { FetchLike } from "./http.js";
 export {
   TaskResult,
   JOB_STATUSES,

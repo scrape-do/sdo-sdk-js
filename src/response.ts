@@ -28,7 +28,9 @@ function collectHeaders(headers: ScrapeResultInit["headers"]): Map<string, strin
   if (headers instanceof Headers) {
     // fetch joins repeated headers with ", ", which is lossy for Set-Cookie
     // (cookie dates contain commas); getSetCookie keeps them apart.
-    headers.forEach((v, k) => k !== "set-cookie" && add(k, v));
+    headers.forEach((v, k) => {
+      if (k !== "set-cookie") add(k, v);
+    });
     for (const cookie of headers.getSetCookie()) add("set-cookie", cookie);
   } else {
     for (const [k, v] of Object.entries(headers)) for (const one of Array.isArray(v) ? v : [v]) add(k, one);

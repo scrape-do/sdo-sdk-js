@@ -18,6 +18,7 @@ import { redactSecrets, SdoConfigError } from "./errors.js";
 const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
 const SCHEME = /^(https?):\/\//i;
 // `\s` covers ASCII and Unicode whitespace; C0 and C1 controls, DEL, backslash.
+// biome-ignore lint/suspicious/noControlCharactersInRegex: matching control characters is the point.
 const FORBIDDEN_CHAR = /[\s\x00-\x1f\x7f-\x9f\\]/;
 const LONE_SURROGATE = /\p{Cs}/u;
 

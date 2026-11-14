@@ -59,13 +59,13 @@ function encode(value: unknown, seen: Set<object>): string {
   let out: string;
   if (Array.isArray(obj)) {
     // As JSON.stringify: an array hole or unrepresentable element becomes null.
-    out = "[" + obj.map((v) => (isSkippable(v) ? "null" : encode(v, seen))).join(",") + "]";
+    out = `[${obj.map((v) => (isSkippable(v) ? "null" : encode(v, seen))).join(",")}]`;
   } else {
     const rec = obj as Record<string, unknown>;
     const keys = Object.keys(rec)
       .filter((k) => !isSkippable(rec[k]))
       .sort(compareCodePoints);
-    out = "{" + keys.map((k) => JSON.stringify(k) + ":" + encode(rec[k], seen)).join(",") + "}";
+    out = `{${keys.map((k) => `${JSON.stringify(k)}:${encode(rec[k], seen)}`).join(",")}}`;
   }
   seen.delete(obj);
   return out;

@@ -185,7 +185,12 @@ function main() {
       if (!inputTypes.has(name)) continue;
       const refs = [...(node.heritageClauses ?? []).flatMap((c) => c.types.map((t) => text(t.expression, sf)))];
       for (const m of node.members) for (const t of referencedTypes(m.type)) refs.push(t);
-      for (const r of refs) if (!inputTypes.has(r)) (inputTypes.add(r), (grew = true));
+      for (const r of refs) {
+        if (!inputTypes.has(r)) {
+          inputTypes.add(r);
+          grew = true;
+        }
+      }
     }
   }
 
@@ -205,7 +210,7 @@ function main() {
   }
 
   const sorted = [...lines].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
-  writeFileSync(OUT, [...HEADER, ...sorted].join("\n") + "\n");
+  writeFileSync(OUT, `${[...HEADER, ...sorted].join("\n")}\n`);
   process.stdout.write(`api-surface: ${sorted.length} line(s) -> api-surface.txt\n`);
 }
 

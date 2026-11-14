@@ -271,8 +271,8 @@ describe("TaskResult.contentBytes", () => {
     // 8 MiB of base64: a grouped-quantifier pattern threw RangeError here.
     const content = "QUJD".repeat(2 * 1024 * 1024);
     expect(bytesOf(content).length).toBe(6 * 1024 * 1024);
-    expect(() => bytesOf(content + "Q")).toThrow("not valid base64");
-    expect(() => bytesOf(content.slice(0, -1) + "!")).toThrow("not valid base64");
+    expect(() => bytesOf(`${content}Q`)).toThrow("not valid base64");
+    expect(() => bytesOf(`${content.slice(0, -1)}!`)).toThrow("not valid base64");
   });
 });
 

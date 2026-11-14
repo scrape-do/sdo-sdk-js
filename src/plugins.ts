@@ -101,7 +101,7 @@ export async function pluginResponse(
   params: Record<string, unknown>,
   signal?: AbortSignal,
 ): Promise<HttpResponse> {
-  const path = "/plugin/" + validateRoute(route);
+  const path = `/plugin/${validateRoute(route)}`;
   const pairs = pluginQuery(token, params);
   const url = `${baseUrl}${path}?${buildQuery(pairs)}`;
   return transport.send({

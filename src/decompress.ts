@@ -130,6 +130,7 @@ export function decodeBody(body: ByteSource, codings: readonly string[], limit: 
   return out;
 }
 
+// biome-ignore lint/correctness/useYield: a source that fails on its first read, before any byte.
 async function* tooManyCodings(): ByteSource {
   throw new Error(`more than ${MAX_CONTENT_CODINGS} content codings`);
 }

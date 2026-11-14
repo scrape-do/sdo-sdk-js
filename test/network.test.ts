@@ -21,7 +21,6 @@ import { Transport } from "../src/transport.js";
 import { withServer } from "./server.js";
 
 const TARGET = "https://e.com";
-const ok = (_req: unknown, res: { end(b: string): void }) => void res.end("ok");
 
 /** A TCP server that accepts connections and never answers (not even TLS). */
 async function silentServer(): Promise<{ port: number; connections: () => number; close(): Promise<void> }> {
