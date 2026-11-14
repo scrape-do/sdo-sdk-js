@@ -1,35 +1,16 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Changelog
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
-and this project adheres to [Semantic Versioning](https://semver.org/).
+Format: [Keep a Changelog](https://keepachangelog.com/) · [SemVer](https://semver.org/).
+
+Before 1.0, a minor version may contain breaking changes; each is marked
+**Breaking** and described in MIGRATING.md. Patch versions never break.
 
 ## [Unreleased]
 
-### Added
-
-- `jobs.createPlugin(key, params, options?, call?)`: plugin jobs on the async
-  API (`{"Plugin": {"Key": ..., "Params": [...]}}`), one task per params entry,
-  1 to 1000 entries. A malformed key, an empty or oversized list, or options
-  that set `Targets` or `Plugin` throw `SdoConfigError`.
-- `ListJobsOptions` (`page`, `pageSize` 1-100, `status`, `startFrom` /
-  `startTo` as a Date or RFC 3339 string, `sort`) and `JobPage` (`jobs`,
-  `totalCount`, `pageSize`, `pageNumber`, `totalPages`) for the paginated job
-  list; `JOB_STATUSES`, `JOB_SORTS` and `MAX_PLUGIN_PARAMS`.
-- `JobStatus.acquiredConcurrency` and `JobStatus.limitConcurrency`.
-
-### Changed
-
-- **Breaking:** `jobs.list(call?)` is now `jobs.list(options?, call?)` and
-  resolves to a `JobPage`. The endpoint is paginated (10 jobs a page by
-  default), so the old method silently returned only the first page while
-  documenting "all jobs". Read `.jobs` for the list.
-- `jobs.create` also refuses options that set `Plugin`.
-
-## [0.1.0] - 2026-11-01
-
-The first release of `@scrape-do/sdk`, the JavaScript/TypeScript SDK for the
-Scrape.do API. ESM and CommonJS, with type declarations, for Node.js 22 or newer.
+The first release of `@scrape-do/sdk`, the official JavaScript/TypeScript SDK
+for the Scrape.do API. ESM and CommonJS, with type declarations, for Node.js 22
+or newer.
 
 ### Added
 
@@ -43,21 +24,37 @@ Scrape.do API. ESM and CommonJS, with type declarations, for Node.js 22 or newer
   option names are a `SdoConfigError` with a suggestion where one fits.
 - **ScrapeConfig** covering the documented public scrape parameters, validated
   before any request: enums case-insensitive and sent lowercase, the documented
-  millisecond ranges, render-only parameters that need `render`, an absolute
-  http(s) target URL (a string grammar, sent exactly as given), and unknown
-  option names. Unset values (`false`, `0`, `""`, `[]`, `{}`) are omitted.
+  millisecond ranges, render-only parameters (`width` and `height` included)
+  that need `render`, an absolute http(s) target URL (a string grammar, sent
+  exactly as given), and unknown option names. Unset values (`false`, `0`, `""`,
+  `[]`, `{}`) are omitted, except that `blockResources` is tri-state: unset
+  sends nothing, `true` needs `render`, and `false` is sent as
+  `blockResources=false` (the gateway defaults to `true`).
   `extraParams` is the escape hatch for anything else (`token`, `url`, an empty
   key and a key that is not a parameter name — a letter, then letters, digits,
   `_`, `.` or `-` — are refused). `playWithBrowser` and JSON bodies use one
   canonical JSON encoding.
+- **Parameter rules.** The documented parameter dependencies the gateway
+  rejects with a 400, or documents as invalid, are a `SdoConfigError` before any
+  request: `showFrames`, `showWebsocketRequests` and the screenshot options
+  require `returnJson`; at most one screenshot option; `particularScreenshot`
+  excludes `playWithBrowser`; `regionalGeoCode` requires `superProxy` and
+  excludes `geoCode`; `zipCode` requires `superProxy` and `geoCode`;
+  `sessionId` is an integer 0-1000000 (a number or decimal digits; `0` is
+  sent); `retryTimeout` excludes `render`; at most one of `customHeaders`,
+  `extraHeaders`, `forwardHeaders`. `returnJson` without `render` is valid (the
+  gateway wraps the plain response in JSON).
 - **One wire encoding.** The query string is built by hand in a fixed order
-  (token, url, typed parameters in spec order, `extraParams` sorted by code
-  point), with RFC 3986 percent-encoding.
+  (token, url, the typed parameters in the order every sdo SDK uses,
+  `extraParams` sorted by code point), with RFC 3986 percent-encoding.
 - **Request method, body and headers.** `client.scrape(url, { method, json,
   data, headers })` or `client.scrape(config, { ... })`. A body without a method
   is sent as POST. Header names are case-insensitive and a caller's value
   replaces the SDK's own; invalid names or values and `Host`, `Content-Length`,
-  `Transfer-Encoding` or `Connection` are a `SdoConfigError` before sending.
+  `Transfer-Encoding` or `Connection` are a `SdoConfigError` before sending. A
+  rendered request (`render: true`) with any method other than GET is a
+  `SdoConfigError` too: the gateway answers it with a 400 ("JavaScript Render
+  feature just works with 'GET' method type").
 - **Transport.** `node:http` / `node:https` by default. Redirects are never
   followed. The timeout is a total deadline per attempt (70 seconds by default:
   the gateway's 60-second default plus 10), raised to a gateway `timeout` plus
@@ -65,6 +62,8 @@ Scrape.do API. ESM and CommonJS, with type declarations, for Node.js 22 or newer
   integer `timeout` param. Only failures before the
   request was sent are retried, together with the retryable statuses (429 only
   for POST, PUT, PATCH and DELETE); `Retry-After` is honoured up to 30 seconds.
+  A 510, the gateway's record of a request its HTTP client cancelled before it
+  finished, is not an upstream failure and is not retried.
 - **Cancellation.** An `AbortSignal` (`signal`) on `scrape()`, `plugin()` and
   every job call aborts the request or the wait before a retry, with
   `SdoAbortError`.
@@ -92,12 +91,13 @@ Scrape.do API. ESM and CommonJS, with type declarations, for Node.js 22 or newer
   plugin's `{"error": ..., "message": ...}` reads too) or a fixed default.
   Target 404/410 pages, any status of 400 or above the gateway billed (a
   positive `Scrape.do-Request-Cost`, the authoritative figure) and a target's
-  own answer under `transparentResponse` are results, never errors; without a
-  positive cost a status keeps its gateway meaning (the gateway's own 400 is
-  an `SdoValidationError`, its 401 an `SdoAuthError`), on the scrape and
+  own answer under `transparentResponse` are results, never errors or retried;
+  without a positive cost a status keeps its gateway meaning (the gateway's own
+  400 is an `SdoValidationError`, its 401 an `SdoAuthError`), on the scrape and
   plugin paths alike. `billed` follows the cost header when present, else the
   documented table; `SdoApiError.cost` holds the header, read like
-  `ScrapeResult.cost` (one value, ASCII digits, at most 2^53-1).
+  `ScrapeResult.cost` (one value, trimmed of spaces and tabs, ASCII digits, at
+  most 2^53-1).
 - **Plugins.** `client.plugin(route, params)` calls any documented plugin;
   routes and parameter names are validated and parameters sent sorted (objects
   as JSON). `client.pluginResult(route, params)` returns the same response as a
@@ -110,56 +110,25 @@ Scrape.do API. ESM and CommonJS, with type declarations, for Node.js 22 or newer
   `remainingConcurrentRequest`, `remainingMonthlyRequest`); a body without those
   fields is a `SdoTransportError`. The endpoint is rate-limited to 10 requests
   per minute, so its error statuses (429 included) are not retried.
-- **Async jobs.** `client.jobs.create` / `status` / `result` / `list` / `cancel`
-  / `me` on the REST job API at `https://q.scrape.do`, authenticated with the
-  `X-Token` header. Typed results (`Job`, `JobStatus`, `Task`, `TaskResult`,
-  `Account`) read absent or mistyped fields as `undefined`;
-  `TaskResult.contentBytes()` decodes base64 content, validated in linear time
-  whatever its size.
+- **Async jobs.** `client.jobs.create` / `createPlugin` / `status` / `result` /
+  `list` / `cancel` / `me` on the REST job API at `https://q.scrape.do`,
+  authenticated with the `X-Token` header. `createPlugin(key, params, options?,
+  call?)` submits a plugin job (`{"Plugin": {"Key": ..., "Params": [...]}}`),
+  one task per params entry, 1 to 1000 entries; a malformed key, an empty or
+  oversized list, or options that set `Targets` or `Plugin` (on `create` too)
+  throw `SdoConfigError`. `list(options?, call?)` reads one page of the
+  paginated job list (`ListJobsOptions`: `page`, `pageSize` 1-100, `status`,
+  `startFrom` / `startTo` as a Date or RFC 3339 string, `sort`) into a
+  `JobPage` (`jobs`, `totalCount`, `pageSize`, `pageNumber`, `totalPages`);
+  `JOB_STATUSES`, `JOB_SORTS` and `MAX_PLUGIN_PARAMS` export the accepted
+  values. Typed results (`Job`, `JobStatus` with `acquiredConcurrency` and
+  `limitConcurrency`, `JobPage`, `Task`, `TaskResult`, `Account`) read absent
+  or mistyped fields as `undefined`; `TaskResult.contentBytes()` decodes base64
+  content, validated in linear time whatever its size.
 
-### Changed
+### Fixed
 
-- `scrape` refuses a rendered request (`render: true`) with any
-  method other than GET with a `SdoConfigError`, before anything is sent. The
-  gateway answers such a request with a 400 ("JavaScript Render feature just
-  works with 'GET' method type").
-
-- **Behavior change.** `blockResources: false` is now sent as
-  `blockResources=false` (it was dropped as unset, so resource blocking could
-  not be turned off: the gateway defaults to `true`). The option is tri-state:
-  unset sends nothing, `true` needs `render`, and `false` does not.
-- **Behavior change.** `Scrape.do-Request-Cost` decides origin and billing.
-  Any response of status 400 or above with a positive cost is the target's
-  answer the gateway billed (its 400, 401, 403, 422, ...) and is now a
-  `ScrapeResult`, like a target 404/410, never retried. The gateway's own
-  errors carry no cost (or 0) and keep their classes: its 400 is an
-  `SdoValidationError`, its 401 an `SdoAuthError`, both with `billed: false` —
-  a 400 is no longer always billed. `billed` follows the cost header when
-  present, else the documented table. New `SdoApiError.cost`;
-  `ScrapeResult.cost` now trims spaces and tabs and refuses values over
-  2^53-1.
-- **Behavior change.** More documented parameter rules are checked before any
-  request (`SdoConfigError`), each one the gateway rejects with a 400 or
-  documents as invalid: `showFrames`, `showWebsocketRequests` and the screenshot
-  options require `returnJson`; at most one screenshot option;
-  `particularScreenshot` excludes `playWithBrowser`; `regionalGeoCode` requires
-  `superProxy` and excludes `geoCode`; `zipCode` requires `superProxy` and
-  `geoCode`; `sessionId` must be an integer 0-1000000 (it now also accepts a
-  number; `0` is sent); `retryTimeout` excludes `render`; at most one of
-  `customHeaders`, `extraHeaders`, `forwardHeaders`; `width` and `height`
-  require `render`. `returnJson` without `render` stays valid (the gateway wraps
-  the plain response in JSON).
-- **Behavior change.** A 510 is no longer retried and its default message is
-  "The request was canceled by the HTTP client (HTTP 510)." The gateway answers
-  510 only when the client cancelled the request before it finished; it is not
-  an upstream failure.
-- Option docs corrected: `pureCookies` returns the target's `Set-Cookie` header
-  instead of `Scrape.do-Cookies` (the body is unchanged); `returnJson` returns
-  network requests and content as JSON.
-- **Behavior change.** The default client timeout is 70 seconds (was 60), so a
-  request that sets no gateway `timeout` (60 seconds by default) is never
-  abandoned just before its answer arrives. An explicit `timeoutMs` or
-  `SDO_TIMEOUT` keeps its meaning.
+- The postal-code option is sent as the documented `zipcode` query parameter.
 
 ### Security
 
