@@ -1,3 +1,4 @@
+<!-- SPDX-License-Identifier: Apache-2.0 -->
 # Security Policy
 
 This document describes how to report a vulnerability in **`@scrape-do/sdk`** (the `sdo-sdk-js` repository) and what you can expect from us in return. It is part of the `sdo` open-source project — Scrape.do's official SDK, CLI, and MCP tooling.

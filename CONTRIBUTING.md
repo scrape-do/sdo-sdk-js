@@ -1,3 +1,4 @@
+<!-- SPDX-License-Identifier: Apache-2.0 -->
 # Contributing to sdo-sdk-js
 
 Thanks for helping build the official Scrape.do JavaScript/TypeScript SDK (`@scrape-do/sdk`). This document covers how to set up your environment, the test-first workflow we follow, and the rules every change must satisfy before it can be merged.

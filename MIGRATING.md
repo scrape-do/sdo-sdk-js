@@ -1,3 +1,4 @@
+<!-- SPDX-License-Identifier: Apache-2.0 -->
 # Migrating `@scrape-do/sdk`
 
 This guide describes how to upgrade between versions of the `@scrape-do/sdk`
