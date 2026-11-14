@@ -19,8 +19,13 @@ breaking change.
   behavior. Every breaking change is listed in this file with a before/after
   example and, where practical, a deprecation period in the preceding minor.
 
+Before 1.0, a minor version may contain breaking changes; each is marked
+**Breaking** in [CHANGELOG.md](CHANGELOG.md) and described in this file. Patch
+versions never break.
+
 Pin a version range you trust in `package.json` and review this guide before
-crossing a major boundary:
+crossing a major boundary (before 1.0, a minor one; `^0.1.0` already stops
+below `0.2.0`):
 
 ```jsonc
 {
@@ -41,11 +46,11 @@ published type declarations:
 - Documented configuration: the `SDO_TOKEN` environment variable and any
   constructor options that mirror it.
 
-The public surface mirrors a single hand-maintained specification shared across
-the Python, JS, and Go SDKs. A codegen factory turns that spec into a
-cross-language conformance corpus, and every SDK — including this one — is
-tested against the same corpus. A change is therefore only "breaking" if it
-breaks that shared contract, which keeps behavior consistent across languages.
+The request parameters, defaults and observable behaviour are shared by all
+sdo SDKs and pinned by the conformance corpus (`conformance.json`), which
+Scrape.do maintains against https://scrape.do/documentation. The exported
+names and signatures are recorded in `api-surface.txt`. A change to a parameter
+lands in every SDK together, which keeps behaviour consistent across languages.
 
 ### What is **not** covered by these guarantees
 
@@ -60,11 +65,11 @@ The following may change in any release without a major bump:
 
 ### Authentication and configuration stability
 
-Authentication is token-only via the `SDO_TOKEN` environment variable. Removing
-or renaming that variable, or adding any other required auth mechanism, is a
-breaking change and will be called out here. There is **no telemetry** and **no
-UI**; the SDK will never start collecting usage data or require an interactive
-component as part of an upgrade.
+Authentication is token-only: the `token` option or the `SDO_TOKEN` environment
+variable. Removing or renaming either, or adding any other required auth
+mechanism, is a breaking change and will be called out here. There is **no
+telemetry** and **no UI**; the SDK will never start collecting usage data or
+require an interactive component as part of an upgrade.
 
 ### Deprecations
 
@@ -73,7 +78,8 @@ When something is slated for removal we:
 1. Mark it `@deprecated` in the type declarations (so editors and `tsc` surface
    a warning) with a pointer to the replacement.
 2. Keep it working for at least one minor release.
-3. Remove it only in the next major, with an entry in this file.
+3. Remove it only in the next major (before 1.0, the next minor at the
+   earliest), with an entry in this file.
 
 A deprecation warning is your signal to migrate before the next major — it is
 never an emergency on its own.
@@ -84,7 +90,8 @@ Governance is solo maintainer plus AI assistance: the founder is the sole
 approver of every release. Contributions are accepted under the
 [Developer Certificate of Origin](https://developercertificate.org/) with a
 `Signed-off-by` line on each commit (DCO sign-off, not a CLA). Breaking changes
-are made deliberately, documented here, and shipped only under a major version.
+are made deliberately, documented here, and shipped only under a major version
+(before 1.0, a minor version).
 
 ## Migrations
 
