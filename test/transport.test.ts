@@ -53,11 +53,11 @@ describe("transport error mapping & retry", () => {
     expect.assertions(2);
   });
 
-  // The gateway answers a parameter it cannot parse (render=mert) before it
+  // The gateway answers a parameter it cannot parse (render=maybe) before it
   // authorizes the request: a 400 with its JSON envelope and no
   // Scrape.do-Request-Cost. That is an unbilled validation error with the
   // gateway's message, never retried.
-  it("surfaces the gateway's own 400 (render=mert) as an unbilled validation error", async () => {
+  it("surfaces the gateway's own 400 (render=maybe) as an unbilled validation error", async () => {
     const body =
       `{"URL":"https://e.com","StatusCode":400,"Message":["'Render' parameter should boolean."],` +
       `"PossibleCauses":["Please check your request."],"Contact":"Please don't hesitate to contact with us via support@scrape.do."}`;
@@ -72,9 +72,9 @@ describe("transport error mapping & retry", () => {
         }),
     );
     const err = await client(f)
-      .scrape("https://e.com", { extraParams: { render: "mert" } })
+      .scrape("https://e.com", { extraParams: { render: "maybe" } })
       .catch((e: unknown) => e);
-    expect(new URL(f.calls[0]!.url).searchParams.get("render")).toBe("mert");
+    expect(new URL(f.calls[0]!.url).searchParams.get("render")).toBe("maybe");
     expect(err).toBeInstanceOf(SdoValidationError);
     expect((err as SdoValidationError).message).toBe("'Render' parameter should boolean.");
     expect((err as SdoValidationError).billed).toBe(false);

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
-// Cross-language conformance: this SDK must match the shared generated corpus
-// (copied here by the codegen factory, never edited by hand). Every section of
+// Cross-language conformance: this SDK must match the corpus shared by the Go,
+// JavaScript and Python SDKs (maintained by Scrape.do against
+// https://scrape.do/documentation; never edited here). Every section of
 // the corpus is consumed below; a case whose `skip` lists "js" is skipped, and
 // an unknown section, key or case field fails the run.
 import { createHash } from "node:crypto";
