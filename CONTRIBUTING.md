@@ -167,6 +167,17 @@ Before you open a PR, confirm:
 
 Open the PR against `main` with a clear description of what changed and why. Link the issue that motivated it. The maintainer will review; expect questions and keep the conversation in the PR.
 
+## CI workflows
+
+| Workflow | Runs on | What it does |
+|----------|---------|--------------|
+| `ci.yml` | every push to `main` and every pull request | type check, the test suite with 99% coverage floors on Node 22 and 24 (Linux), plus macOS and Windows on Node 24, including the cross-language conformance suite and its integrity check; the build and `check:dist` (no bundled dependencies, ESM/CJS and TypeScript consumers load it); the public-API snapshot (`api-surface.txt`) must be up to date; on pull requests, a `commits` job checks every commit's subject and sign-off; CodeQL code scanning. |
+| `security.yml` | push to `main`, pull requests, and weekly | secret scanning over the full git history (gitleaks), OSV-Scanner over the lockfile, `npm audit`, and an SBOM uploaded as a build artifact. OpenSSF Scorecard runs on pushes to `main` and weekly, with results in code scanning. |
+| `publish.yml` | a version tag only | A tag `vX.Y.Z-rc.N` publishes to npm under the `next` dist-tag; `vX.Y.Z` publishes under `latest`. The tag must be on `main` and match both `package.json` and `src/version.ts`. The build job re-runs the checks; the publish job uses npm trusted publishing with provenance (no stored token) after approval in the `prerelease` or `release` environment, and skips a version that is already on npm. |
+| Dependabot | weekly | update pull requests for npm dependencies and the GitHub Actions, taken only after a 7-day cooldown; each one runs the checks above. |
+
+Every job runs on GitHub-hosted runners except CodeQL and Scorecard, which run on the organisation's self-hosted runners: their uploads are GitHub API calls that the organisation's IP allow list only accepts from there. CodeQL runs there for same-repository events only, so a pull request from a fork is analysed once merged; Scorecard never runs on a pull request. Every action is pinned to a full commit SHA and every job declares least-privilege `permissions:`. Publishing never happens outside the `scrape-do` organisation, never from a commit that is not on `main`, and never without a maintainer's approval.
+
 ## Releasing
 
 Releases are published from GitHub Actions (`.github/workflows/publish.yml`) when

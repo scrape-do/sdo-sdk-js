@@ -1,9 +1,12 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # sdo — JavaScript/TypeScript SDK for Scrape.do
 
-The official JS/TS SDK for the [Scrape.do](https://scrape.do) web-scraping API.
+[![ci](https://github.com/scrape-do/sdo-sdk-js/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/scrape-do/sdo-sdk-js/actions/workflows/ci.yml) [![security](https://github.com/scrape-do/sdo-sdk-js/actions/workflows/security.yml/badge.svg?branch=main)](https://github.com/scrape-do/sdo-sdk-js/actions/workflows/security.yml) [![license](https://img.shields.io/github/license/scrape-do/sdo-sdk-js)](LICENSE)
+
+The official JavaScript/TypeScript SDK for the [Scrape.do](https://scrape.do) web scraping API.
 Token-only auth, transparent compression, a typed result, and a generic plugin
-core — no telemetry, no UI. ESM + CJS, Node.js 22+.
+core — no telemetry, no UI. ESM + CJS, Node.js 22+. Every parameter is
+described in the [API documentation](https://scrape.do/documentation).
 
 > Package: **`@scrape-do/sdk`**.
 
@@ -14,6 +17,10 @@ npm install @scrape-do/sdk
 # optional CSS extraction via result.selector() (an optional peer dependency):
 npm install cheerio
 ```
+
+`@scrape-do/sdk` succeeds the earlier `@scrape-do/client` package (from
+[scrape-do/node-client](https://github.com/scrape-do/node-client)), which will
+be deprecated once 0.1.0 is on npm.
 
 ## Quickstart
 
@@ -31,6 +38,10 @@ console.log(result.text.slice(0, 200));
 const cfg = new ScrapeConfig("https://example.com", { superProxy: true, output: "markdown" });
 const md = (await client.scrape(cfg)).text;
 ```
+
+Runnable programs are in [`examples/`](examples/). From a clone, run
+`npm install`, set `SDO_TOKEN`, then `npx tsx examples/quickstart.ts` (`tsx` is
+a pinned devDependency).
 
 ## Authentication and configuration
 
@@ -148,7 +159,7 @@ billed, and redirects — return a `ScrapeResult` (check `result.statusCode`).
 status 400 or above with a positive cost is the target's own answer (its 400,
 401, 403, 422, ...), returned as a result and never retried. Without one, the
 status keeps its gateway meaning: the gateway's own 400 (a parameter it
-rejected, such as `render=mert`) is a `SdoValidationError`, its 401 (a refused
+rejected, such as `render=maybe`) is a `SdoValidationError`, its 401 (a refused
 token, no credits) a `SdoAuthError`. An error's `billed` follows the cost
 header when present (0 is not billed) and the documented status table
 otherwise; `error.cost` and `result.cost` hold the header. Plugin calls follow
@@ -297,16 +308,11 @@ of `fetch`). Redirects are still never followed, but that path differs:
 - Node's `fetch` turns a 407 answer into a network error and resends a request
   answered with 421 on its own; the default transport returns both as they are.
 
-## CI/CD workflows
+## Releases
 
-| Workflow | Runs on | What it does |
-|----------|---------|--------------|
-| `ci.yml` | every push to `main` and every pull request | type check, the test suite with 99% coverage floors on Node 22 and 24 (Linux), plus macOS and Windows on Node 24, including the cross-language conformance suite and its integrity check; the build and `check:dist` (no bundled dependencies, ESM/CJS and TypeScript consumers load it); the public-API snapshot (`api-surface.txt`) must be up to date; CodeQL code scanning. Everything runs on GitHub-hosted runners; CodeQL runs on the org's self-hosted runners for same-repository events (its upload is a GitHub API call the org's IP allow list only accepts from there); a pull request from a fork is analysed once merged. |
-| `security.yml` | push to `main`, pull requests, and weekly | secret scanning over the full git history (gitleaks), OSV-Scanner over the lockfile, `npm audit`, and an SBOM uploaded as a build artifact. OpenSSF Scorecard runs on pushes to `main` and weekly, with results in code scanning. |
-| `publish.yml` | a version tag only | A tag `vX.Y.Z-rc.N` publishes to npm under the `next` dist-tag; `vX.Y.Z` publishes under `latest`. The tag must be on `main` and match both `package.json` and `src/version.ts`. The build job re-runs the checks; the publish job uses npm trusted publishing with provenance (no stored token) after approval in the `prerelease` or `release` environment, and skips a version that is already on npm. |
-| Dependabot | weekly | update pull requests for npm dependencies and the GitHub Actions, taken only after a 7-day cooldown; each one runs the checks above. |
-
-Every action is pinned to a full commit SHA and every job declares least-privilege `permissions:`. Publishing never happens outside the `scrape-do` organisation, never from a commit that is not on `main`, and never without a maintainer's approval.
+Releases are built by GitHub Actions and published to npm with provenance, only
+from `main` and only after a maintainer approves; see
+[CONTRIBUTING.md](CONTRIBUTING.md#ci-workflows).
 
 ## Responsible use
 
@@ -314,6 +320,9 @@ You are responsible for complying with the terms of service, `robots.txt`, and
 applicable laws of any site you scrape. Third-party names are trademarks of their
 respective owners; Scrape.do is not affiliated with them.
 
-## License
+## Documentation, support and security
 
-[Apache-2.0](LICENSE).
+- API documentation: https://scrape.do/documentation
+- Bugs and feature requests for this repository: [GitHub Issues](https://github.com/scrape-do/sdo-sdk-js/issues). Account, billing and API questions: support@scrape.do.
+- Security issues: see [SECURITY.md](SECURITY.md). Never post an API token in an issue.
+- [CONTRIBUTING.md](CONTRIBUTING.md) · [CHANGELOG.md](CHANGELOG.md) · [MIGRATING.md](MIGRATING.md) · [Apache-2.0](LICENSE)
