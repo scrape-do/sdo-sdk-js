@@ -126,10 +126,6 @@ or newer.
   or mistyped fields as `undefined`; `TaskResult.contentBytes()` decodes base64
   content, validated in linear time whatever its size.
 
-### Fixed
-
-- The postal-code option is sent as the documented `zipcode` query parameter.
-
 ### Security
 
 - A target URL in a `SdoConfigError` has its `user:password@` masked and its
