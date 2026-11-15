@@ -236,6 +236,12 @@ One-time setup before the first release:
 5. Once 0.1.0 is on npm, retire the placeholder:
    `npm dist-tag rm @scrape-do/sdk bootstrap` and
    `npm deprecate @scrape-do/sdk@0.0.0-bootstrap.0 "Placeholder that created the package; install @scrape-do/sdk@latest."`
+6. Retire the predecessor. `@scrape-do/client` (repository
+   `scrape-do/node-client`) is superseded by this package. Once 0.1.0 is on
+   `latest`: `npm deprecate @scrape-do/client@"*" "Superseded by
+   @scrape-do/sdk: https://github.com/scrape-do/sdo-sdk-js"`, put the same
+   pointer at the top of node-client's README, and archive that repository.
+   Existing installs keep working; `npm install` prints the notice.
 
 npm only accepts provenance from a public source repository; this repository
 is public, so the workflow publishes with provenance.
