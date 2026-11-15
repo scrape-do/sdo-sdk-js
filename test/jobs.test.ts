@@ -29,7 +29,7 @@ const queryOf = (f: ReturnType<typeof mockFetch>, i = 0) => new URL(f.calls[i]!.
 describe("AsyncJobs.create", () => {
   it("POSTs /api/v1/jobs with X-Token, a JSON body of Targets+options, and returns a Job", async () => {
     const f = mockFetch(() => json({ JobID: "job-1", Message: "queued", TaskIDs: ["t1", "t2"] }));
-    const job = await client(f).jobs.create(["https://a.com", "https://b.com"], {
+    const job = await client(f).jobs.create(["https://example.com", "https://example.org"], {
       Super: true,
       GeoCode: "us",
     });
@@ -45,14 +45,14 @@ describe("AsyncJobs.create", () => {
     expect(header(call.init, "Content-Type")).toBe("application/json");
     // Canonical JSON: keys sorted, compact.
     expect(bodyText(call.init)).toBe(
-      '{"GeoCode":"us","Super":true,"Targets":["https://a.com","https://b.com"]}',
+      '{"GeoCode":"us","Super":true,"Targets":["https://example.com","https://example.org"]}',
     );
   });
 
   it("defaults options to an empty object (body is just Targets)", async () => {
     const f = mockFetch(() => json({ JobID: "j", Message: "ok", TaskIDs: [] }));
-    await client(f).jobs.create(["https://a.com"]);
-    expect(bodyText(f.calls[0]!.init)).toBe('{"Targets":["https://a.com"]}');
+    await client(f).jobs.create(["https://example.com"]);
+    expect(bodyText(f.calls[0]!.init)).toBe('{"Targets":["https://example.com"]}');
   });
 });
 
@@ -66,7 +66,7 @@ describe("AsyncJobs.status", () => {
         StartTime: "2026-01-01T00:00:00Z",
         EndTime: "",
         Canceled: false,
-        Tasks: [{ TaskID: "t1", URL: "https://a.com", Status: "done" }],
+        Tasks: [{ TaskID: "t1", URL: "https://example.com", Status: "done" }],
       }),
     );
     const s = await client(f).jobs.status("job-1");
@@ -78,7 +78,7 @@ describe("AsyncJobs.status", () => {
       startTime: "2026-01-01T00:00:00Z",
       endTime: "",
       canceled: false,
-      tasks: [{ taskId: "t1", url: "https://a.com", status: "done" }],
+      tasks: [{ taskId: "t1", url: "https://example.com", status: "done" }],
     });
     expect(pathOf(f)).toBe("/api/v1/jobs/job-1");
     expect(f.calls[0]!.init?.method).toBe("GET");
@@ -92,7 +92,7 @@ describe("AsyncJobs.result", () => {
       json({
         TaskID: "t1",
         JobID: "job-1",
-        URL: "https://a.com",
+        URL: "https://example.com",
         Status: "done",
         StatusCode: 200,
         Base64EncodedContent: true,
@@ -106,7 +106,7 @@ describe("AsyncJobs.result", () => {
     expect(r).toMatchObject({
       taskId: "t1",
       jobId: "job-1",
-      url: "https://a.com",
+      url: "https://example.com",
       status: "done",
       statusCode: 200,
       base64EncodedContent: true,
@@ -136,7 +136,7 @@ describe("AsyncJobs.list", () => {
             StartTime: "s",
             EndTime: "e",
             Canceled: false,
-            Tasks: [{ TaskID: "t1", URL: "https://a.com", Status: "done" }],
+            Tasks: [{ TaskID: "t1", URL: "https://example.com", Status: "done" }],
           },
         ],
       }),
@@ -145,7 +145,7 @@ describe("AsyncJobs.list", () => {
 
     expect(jobs).toHaveLength(1);
     expect(jobs[0]!.jobId).toBe("job-1");
-    expect(jobs[0]!.tasks[0]).toEqual({ taskId: "t1", url: "https://a.com", status: "done" });
+    expect(jobs[0]!.tasks[0]).toEqual({ taskId: "t1", url: "https://example.com", status: "done" });
     expect(pathOf(f)).toBe("/api/v1/jobs");
     expect(f.calls[0]!.init?.method).toBe("GET");
     expect(header(f.calls[0]!.init, "X-Token")).toBe("tok");
@@ -187,7 +187,7 @@ describe("AsyncJobs error handling", () => {
   it("maps a non-2xx job response to the shared SdoError taxonomy, parsing the Error envelope", async () => {
     const f = mockFetch(() => json({ Error: "callback not supported anymore", Code: 400 }, 400));
     await client(f)
-      .jobs.create(["https://a.com"])
+      .jobs.create(["https://example.com"])
       .catch((e) => {
         expect(e).toBeInstanceOf(SdoValidationError);
         expect((e as SdoValidationError).message).toBe("callback not supported anymore");
@@ -222,12 +222,14 @@ describe("AsyncJobs input and response shapes", () => {
   it("refuses a create() call it cannot express, before any request", async () => {
     const f = mockFetch(() => json({}));
     const jobs = client(f).jobs;
-    await expect(jobs.create("https://a.com" as never)).rejects.toBeInstanceOf(SdoConfigError);
-    await expect(jobs.create([1] as never)).rejects.toBeInstanceOf(SdoConfigError);
-    await expect(jobs.create(["https://a.com"], [] as never)).rejects.toBeInstanceOf(
+    await expect(jobs.create("https://example.com" as never)).rejects.toBeInstanceOf(
       SdoConfigError,
     );
-    await expect(jobs.create(["https://a.com"], { targets: [] })).rejects.toBeInstanceOf(
+    await expect(jobs.create([1] as never)).rejects.toBeInstanceOf(SdoConfigError);
+    await expect(jobs.create(["https://example.com"], [] as never)).rejects.toBeInstanceOf(
+      SdoConfigError,
+    );
+    await expect(jobs.create(["https://example.com"], { targets: [] })).rejects.toBeInstanceOf(
       SdoConfigError,
     );
     expect(f.calls).toHaveLength(0);
@@ -334,9 +336,9 @@ describe("AsyncJobs.createPlugin", () => {
       jobs.createPlugin("amazon/pdp", "x" as never),
       jobs.createPlugin("amazon/pdp", tooMany),
       jobs.createPlugin("amazon/pdp", [null as never]),
-      jobs.createPlugin("amazon/pdp", [{ q: "x" }], { Targets: ["https://a.com"] }),
+      jobs.createPlugin("amazon/pdp", [{ q: "x" }], { Targets: ["https://example.com"] }),
       jobs.createPlugin("amazon/pdp", [{ q: "x" }], [] as never),
-      jobs.create(["https://a.com"], { plugin: {} }),
+      jobs.create(["https://example.com"], { plugin: {} }),
     ]) {
       await expect(p).rejects.toBeInstanceOf(SdoConfigError);
     }
