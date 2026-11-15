@@ -17,7 +17,8 @@ breaking change.
   code keeps working unchanged.
 - **MAJOR** (`0.x` → `1.0`, `1.x` → `2.0`) — may remove or change existing
   behavior. Every breaking change is listed in this file with a before/after
-  example and, where practical, a deprecation period in the preceding minor.
+  example and, where practical, a deprecation period first (see
+  [Deprecations](#deprecations)).
 
 Before 1.0, a minor version may contain breaking changes; each is marked
 **Breaking** in [CHANGELOG.md](CHANGELOG.md) and described in this file. Patch
@@ -77,9 +78,10 @@ When something is slated for removal we:
 
 1. Mark it `@deprecated` in the type declarations (so editors and `tsc` surface
    a warning) with a pointer to the replacement.
-2. Keep it working for at least one minor release.
-3. Remove it only in the next major (before 1.0, the next minor at the
-   earliest), with an entry in this file.
+2. Keep it working for at least two minor releases and at least 90 days before
+   it is removed.
+3. Remove it only in a major release (before 1.0, a minor release) after that
+   window, with an entry in this file.
 
 A deprecation warning is your signal to migrate before the next major — it is
 never an emergency on its own.
