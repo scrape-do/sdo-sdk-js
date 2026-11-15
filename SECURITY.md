@@ -14,7 +14,7 @@ Use **either** private channel below — both reach the same maintainer:
 1. **GitHub Private Vulnerability Reporting (preferred)**
    Go to the repository's **Security** tab → **Report a vulnerability**. This opens a private advisory (GHSA) draft visible only to you and the maintainers, and keeps the disclosure timeline, fix, and credit in one place.
 
-2. **Email** — **security@scrape.do**
+2. **Email** — **support@scrape.do**
    Use this if you cannot use GitHub's private reporting, or for anything sensitive enough that you'd rather not file even a private GitHub draft. PGP is available on request — email first and we'll exchange a key before you send details. We move an emailed report into a private GitHub advisory.
 
 Please include as much of the following as you can:
@@ -77,7 +77,7 @@ We will not pursue legal action against good-faith researchers who follow this p
 
 In scope: vulnerabilities in the `@scrape-do/sdk` package source as published from this repository.
 
-Out of scope: issues in the Scrape.do platform/API itself (for those, email security@scrape.do and say the issue is in the Scrape.do service itself rather than in this repository), vulnerabilities solely in third-party dependencies without a demonstrated impact through this SDK, and findings that require a compromised local environment or a leaked `SDO_TOKEN` obtained outside the SDK.
+Out of scope: issues in the Scrape.do platform/API itself (for those, email support@scrape.do and say the issue is in the Scrape.do service itself rather than in this repository), vulnerabilities solely in third-party dependencies without a demonstrated impact through this SDK, and findings that require a compromised local environment or a leaked `SDO_TOKEN` obtained outside the SDK.
 
 ---
 
