@@ -9,8 +9,8 @@ Before 1.0, a minor version may contain breaking changes; each is marked
 ## [Unreleased]
 
 The first release of `@scrape-do/sdk`, the official JavaScript/TypeScript SDK
-for the Scrape.do API. ESM and CommonJS, with type declarations, for Node.js 22
-or newer.
+for the Scrape.do API. ESM and CommonJS, with type declarations, for Node.js
+22.23.4, 24.22.1 or 26.12.1 or newer.
 
 ### Added
 
@@ -128,6 +128,9 @@ or newer.
 
 ### Security
 
+- Requires Node.js 22.23.4, 24.22.1 or 26.12.1 or newer: earlier releases have
+  an out-of-bounds write in the bundled Brotli decoder (CVE-2026-111497),
+  reachable from a target's `Content-Encoding: br` response.
 - A target URL in a `SdoConfigError` has its `user:password@` masked and its
   credential-shaped query values redacted.
 - The token only travels over https and is masked, literally and

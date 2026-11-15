@@ -5,8 +5,11 @@
 
 The official JavaScript/TypeScript SDK for the [Scrape.do](https://scrape.do) web scraping API.
 Token-only auth, transparent compression, a typed result, and a generic plugin
-core — no telemetry, no UI. ESM + CJS, Node.js 22+. Every parameter is
-described in the [API documentation](https://scrape.do/documentation).
+core — no telemetry, no UI. ESM + CJS, Node.js 22.23.4, 24.22.1 or 26.12.1 or
+newer: earlier releases have an out-of-bounds write in the bundled Brotli
+decoder (CVE-2026-111497), which a target's `Content-Encoding: br` response
+reaches through the SDK's decompression. Every parameter is described in the
+[API documentation](https://scrape.do/documentation).
 
 > Package: **`@scrape-do/sdk`**.
 

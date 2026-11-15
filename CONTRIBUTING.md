@@ -6,7 +6,7 @@ Thanks for helping build the official Scrape.do JavaScript/TypeScript SDK (`@scr
 ## Project at a glance
 
 - **Package:** `@scrape-do/sdk` on npm
-- **Runtime:** Node.js 22 or newer (ESM + CJS), for users and development alike. Node.js 20 reached end of life in April 2026 and is not supported
+- **Runtime:** Node.js 22.23.4, 24.22.1 or 26.12.1 or newer (ESM + CJS), for users and development alike. Earlier releases have an out-of-bounds write in the bundled Brotli decoder (CVE-2026-111497), reachable through the SDK's `br` decompression of a target's response. Node.js 20 reached end of life in April 2026 and is not supported
 - **Language:** TypeScript, type-checked with `tsc`, bundled with `tsup`
 - **Tests:** [Vitest](https://vitest.dev/)
 - **License:** Apache-2.0
@@ -27,7 +27,7 @@ Be patient with review latency, and keep PRs small and self-contained so they ar
 
 ## Development setup
 
-You need Node.js 22+ and npm.
+You need Node.js 22.23.4, 24.22.1 or 26.12.1 or newer, and npm.
 
 ```bash
 git clone https://github.com/scrape-do/sdo-sdk-js
