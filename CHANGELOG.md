@@ -150,12 +150,15 @@ for the Scrape.do API. ESM and CommonJS, with type declarations, for Node.js
   limit); a longer chain is a `SdoTransportError`, never retried, so a target
   cannot make the SDK stack a decoder per listed coding. A decode error quotes
   at most 64 characters of the header.
-- CI: every job runs on GitHub-hosted runners, so code from a pull request
-  never reaches the org's persistent self-hosted runners (only CodeQL runs
-  there, for same-repository events; a fork's pull request is analysed once
-  merged); every checkout drops its token
+- CI: code from a fork's pull request never reaches the organisation's
+  persistent self-hosted runners: every job runs on GitHub-hosted runners
+  except CodeQL (same-repository events only; a fork's pull request is
+  analysed once merged) and Scorecard (never on a pull request); every
+  checkout drops its token
   (`persist-credentials: false`); and gitleaks scans with a config and ignore
   list from the workflow, so a pull request cannot allowlist its own secret with
   a `.gitleaks.toml` or `.gitleaksignore`.
 - The User-Agent is exactly `sdo-sdk-js/<version>`, the only client-identifying
   header. There is no telemetry.
+
+[Unreleased]: https://github.com/scrape-do/sdo-sdk-js/commits/main
