@@ -5,10 +5,16 @@
 
 The official JavaScript/TypeScript SDK for the [Scrape.do](https://scrape.do) web scraping API.
 Token-only auth, transparent compression, a typed result, and a generic plugin
-core — no telemetry, no UI. ESM + CJS, Node.js 22+. Every parameter is
-described in the [API documentation](https://scrape.do/documentation).
+core — no telemetry, no UI. ESM + CJS, Node.js 22.23.4, 24.22.1 or 26.12.1 or
+newer: earlier releases have an out-of-bounds write in the bundled Brotli
+decoder (CVE-2026-111497), which a target's `Content-Encoding: br` response
+reaches through the SDK's decompression. Every parameter is described in the
+[API documentation](https://scrape.do/documentation).
 
-> Package: **`@scrape-do/sdk`**.
+> Package: **`@scrape-do/sdk`**. The `sdo` command-line tool is not on npm:
+> install it with Homebrew (`brew install scrape-do/tap/sdo`) or Scoop, see
+> [sdo-cli](https://github.com/scrape-do/sdo-cli). The npm package named `sdo`
+> is unrelated to Scrape.do.
 
 ## Install
 
@@ -312,7 +318,7 @@ of `fetch`). Redirects are still never followed, but that path differs:
 
 Releases are built by GitHub Actions and published to npm with provenance, only
 from `main` and only after a maintainer approves; see
-[CONTRIBUTING.md](CONTRIBUTING.md#ci-workflows).
+[CONTRIBUTING.md](CONTRIBUTING.md#releasing).
 
 ## Responsible use
 

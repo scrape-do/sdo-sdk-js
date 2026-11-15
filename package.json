@@ -28,7 +28,7 @@
   ],
   "sideEffects": false,
   "engines": {
-    "node": ">=22"
+    "node": "^22.23.4 || ^24.22.1 || >=26.12.1"
   },
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --dts --clean --target node22 --external cheerio --splitting",
@@ -53,7 +53,7 @@
   "homepage": "https://scrape.do",
   "repository": {
     "type": "git",
-    "url": "https://github.com/scrape-do/sdo-sdk-js"
+    "url": "git+https://github.com/scrape-do/sdo-sdk-js.git"
   },
   "bugs": {
     "url": "https://github.com/scrape-do/sdo-sdk-js/issues"

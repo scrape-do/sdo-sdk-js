@@ -23,8 +23,8 @@ updates:
           - "vitest"
           - "@vitest/*"
     ignore:
-      # engines.node is ">=22", so the types track Node 22: newer @types/node
-      # majors would let code typecheck against APIs Node 22 lacks.
+      # engines.node's oldest line is Node 22, so the types track Node 22: newer
+      # @types/node majors would let code typecheck against APIs Node 22 lacks.
       - dependency-name: "@types/node"
         update-types: ["version-update:semver-major"]
       # TypeScript 7 (the native compiler) breaks tsup's dts build and

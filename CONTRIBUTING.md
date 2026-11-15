@@ -6,7 +6,7 @@ Thanks for helping build the official Scrape.do JavaScript/TypeScript SDK (`@scr
 ## Project at a glance
 
 - **Package:** `@scrape-do/sdk` on npm
-- **Runtime:** Node.js 22 or newer (ESM + CJS), for users and development alike. Node.js 20 reached end of life in April 2026 and is not supported
+- **Runtime:** Node.js 22.23.4, 24.22.1 or 26.12.1 or newer (ESM + CJS), for users and development alike. Earlier releases have an out-of-bounds write in the bundled Brotli decoder (CVE-2026-111497), reachable through the SDK's `br` decompression of a target's response. Node.js 20 reached end of life in April 2026 and is not supported
 - **Language:** TypeScript, type-checked with `tsc`, bundled with `tsup`
 - **Tests:** [Vitest](https://vitest.dev/)
 - **License:** Apache-2.0
@@ -27,7 +27,7 @@ Be patient with review latency, and keep PRs small and self-contained so they ar
 
 ## Development setup
 
-You need Node.js 22+ and npm.
+You need Node.js 22.23.4, 24.22.1 or 26.12.1 or newer, and npm.
 
 ```bash
 git clone https://github.com/scrape-do/sdo-sdk-js
@@ -145,7 +145,7 @@ This appends:
 Signed-off-by: Your Name <your.email@example.com>
 ```
 
-Use your real name and a reachable email. CI checks every commit's subject and sign-off (`commits` job); a pull request fails until they are fixed. To sign off a commit you already made:
+Use your real name and a reachable email. CI checks every commit's subject and sign-off, and the pull request title, which becomes the squash commit's subject (`commits` job); a pull request fails until they are fixed. To sign off a commit you already made:
 
 ```bash
 git commit --amend -s --no-edit
@@ -174,9 +174,10 @@ Open the PR against `main` with a clear description of what changed and why. Lin
 
 | Workflow | Runs on | What it does |
 |----------|---------|--------------|
-| `ci.yml` | every push to `main` and every pull request | Biome formatting and lint check (`lint` job); type check, the test suite with 99% coverage floors on Node 22 and 24 (Linux), plus macOS and Windows on Node 24, including the cross-language conformance suite and its integrity check; the build and `check:dist` (no bundled dependencies, ESM/CJS and TypeScript consumers load it); the public-API snapshot (`api-surface.txt`) must be up to date; on pull requests, a `commits` job checks every commit's subject and sign-off; CodeQL code scanning. |
+| `ci.yml` | every push to `main` and every pull request | Biome formatting and lint check (`lint` job); type check, the test suite with 99% coverage floors on Node 22, 24 and 26 (Linux), plus macOS and Windows on Node 26, including the cross-language conformance suite and its integrity check; the build and `check:dist` (no bundled dependencies, ESM/CJS and TypeScript consumers load it); the public-API snapshot (`api-surface.txt`) must be up to date; CodeQL code scanning. |
+| `commits.yml` | every pull request: opened, updated, reopened, or its title or description edited | the `commits` job checks every commit's subject and sign-off and the pull request title, which becomes the squash commit's subject. A workflow of its own, so editing a pull request re-runs only this check. |
 | `security.yml` | push to `main`, pull requests, and weekly | secret scanning over the full git history (gitleaks), OSV-Scanner over the lockfile, `npm audit`, and an SBOM uploaded as a build artifact. OpenSSF Scorecard runs on pushes to `main` and weekly, with results in code scanning. |
-| `publish.yml` | a version tag only | A tag `vX.Y.Z-rc.N` publishes to npm under the `next` dist-tag; `vX.Y.Z` publishes under `latest`. The tag must be on `main` and match both `package.json` and `src/version.ts`. The build job re-runs the checks; the publish job uses npm trusted publishing with provenance (no stored token) after approval in the `prerelease` or `release` environment, and skips a version that is already on npm. |
+| `publish.yml` | a version tag only | A tag `vX.Y.Z-rc.N` publishes to npm under the `next` dist-tag; `vX.Y.Z` publishes under `latest`. The tag must be on `main` and match both `package.json` and `src/version.ts`. The build job re-runs `npm run typecheck`, `npm run test:cov` (with the coverage floor), `npm run build` and `npm run check:dist` on Node 24; the publish job uses npm trusted publishing with provenance (no stored token) after approval in the `prerelease` or `release` environment, and skips a version that is already on npm. |
 | Dependabot | weekly | update pull requests for npm dependencies and the GitHub Actions, taken only after a 7-day cooldown; each one runs the checks above. |
 
 Every job runs on GitHub-hosted runners except CodeQL and Scorecard, which run on the organisation's self-hosted runners: their uploads are GitHub API calls that the organisation's IP allow list only accepts from there. CodeQL runs there for same-repository events only, so a pull request from a fork is analysed once merged; Scorecard never runs on a pull request. Every action is pinned to a full commit SHA and every job declares least-privilege `permissions:`. Publishing never happens outside the `scrape-do` organisation, never from a commit that is not on `main`, and never without a maintainer's approval.

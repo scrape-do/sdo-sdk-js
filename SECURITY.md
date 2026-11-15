@@ -15,7 +15,7 @@ Use **either** private channel below — both reach the same maintainer:
    Go to the repository's **Security** tab → **Report a vulnerability**. This opens a private advisory (GHSA) draft visible only to you and the maintainers, and keeps the disclosure timeline, fix, and credit in one place.
 
 2. **Email** — **security@scrape.do**
-   PGP is available on request. We move an emailed report into a private GitHub advisory.
+   Use this if you cannot use GitHub's private reporting, or for anything sensitive enough that you'd rather not file even a private GitHub draft. PGP is available on request — email first and we'll exchange a key before you send details. We move an emailed report into a private GitHub advisory.
 
 Please include as much of the following as you can:
 
@@ -51,16 +51,15 @@ We follow Semantic Versioning. Security releases are cut as patch versions on th
 
 ## Triage SLA
 
-We aim to meet the following timelines from first receipt of a valid report:
+We are a small Solo+AI project; timelines are intentionally honest rather than aspirational:
 
-| Stage | Target |
-| ----- | ------ |
-| Acknowledge receipt | within **3 business days** |
-| Initial triage & severity assessment | within **7 business days** |
-| Status update cadence while open | at least every **7 days** |
-| Fix or mitigation for critical/high severity | target within **30 days** of triage |
+- **Acknowledgement:** within **3 business days** of receipt.
+- **Initial assessment** (in scope? severity? reproducible?): within **7 business days** of acknowledgement.
+- **Fix and coordinated release:** target **30 days** for High/Critical severity, **90 days** for Low/Moderate. If we expect to exceed these, we'll tell you and agree on a revised timeline.
 
-Severity is assessed using CVSS v3.1. Timelines may extend for complex issues or those requiring coordination with upstream dependencies; we will keep you updated if so.
+Severity is assessed using CVSS v3.1, with weight given to token exposure and request-integrity impact for this SDK's threat model.
+
+We ask reporters to keep the issue private until a fixed release is available, or until 90 days have passed if no fix has shipped — whichever comes first. We're happy to coordinate a disclosure date with you.
 
 ## Disclosure Process (GHSA → CVE)
 
@@ -72,7 +71,7 @@ We practice coordinated disclosure:
 4. We publish a patched release on the latest supported minor (npm: **`@scrape-do/sdk`**) and update the `SECURITY.md` supported-versions table.
 5. We publish the advisory — including the CVE, affected/fixed versions, impact, and reporter credit — once a fix is available or by mutual agreement on a disclosure date.
 
-We ask reporters to keep details private until the advisory is published. We will not pursue legal action against good-faith researchers who follow this policy, avoid privacy violations and service disruption, and give us a reasonable window to remediate before public disclosure.
+We will not pursue legal action against good-faith researchers who follow this policy, avoid privacy violations and service disruption, and give us a reasonable window to remediate before public disclosure.
 
 ## Scope
 

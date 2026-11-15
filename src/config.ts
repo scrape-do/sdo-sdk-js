@@ -113,9 +113,9 @@ const BOOL: Kind = { t: "bool" };
 const STRING: Kind = { t: "string" };
 const INT: Kind = { t: "int" };
 
-// Every public parameter after `url` and `render`, in the spec's order. The
-// order is part of the contract: all three SDKs emit this same sequence and the
-// conformance corpus pins it.
+// Every public parameter after `url` and `render`, in the shared parameter order
+// the conformance corpus pins. The order is part of the contract: all three SDKs
+// emit this same sequence.
 const PARAMS: readonly Param[] = [
   { opt: "superProxy", wire: "super", kind: BOOL },
   { opt: "device", wire: "device", kind: { t: "enum", values: ["desktop", "mobile", "tablet"] } },
@@ -350,7 +350,10 @@ export class ScrapeConfig {
     checkHeaders(this.options.headers);
   }
 
-  /** The query pairs after the token: url, typed params in spec order, then extraParams sorted by key. */
+  /**
+   * The query pairs after the token: url, typed params in the shared order the conformance
+   * corpus pins, then extraParams sorted by key.
+   */
   toParams(): Array<[string, string]> {
     const o = this.options as Record<string, unknown>;
     rejectUnknownScrapeOptions(o);
