@@ -6,11 +6,12 @@ import { canonicalJson, compareCodePoints, parseJsonBody } from "./json.js";
 import { buildQuery } from "./query.js";
 import type { HttpResponse, Transport } from "./transport.js";
 
-// Plugin routes reach this function from callers — including the MCP server,
+// Plugin routes reach this function from callers — e.g. from an MCP server,
 // where an LLM chooses the value. Validating before it enters the URL path stops
 // traversal ("../"), query injection ("x?token=") and fragment truncation ("x#")
-// from reshaping the request. Mirrors the spec's plugin_route_pattern; a JS `$`
-// (no `m` flag) matches only at the very end, so "x\n" is rejected too.
+// from reshaping the request. Mirrors the conformance corpus's
+// plugin_route_pattern; a JS `$` (no `m` flag) matches only at the very end, so
+// "x\n" is rejected too.
 export const ROUTE_PATTERN = /^[a-z0-9]+(?:[/-][a-z0-9]+)*$/;
 
 /**

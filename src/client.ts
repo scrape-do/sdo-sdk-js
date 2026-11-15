@@ -96,7 +96,7 @@ const CLIENT_OPTION_KEYS: readonly string[] = [
 
 /**
  * The only client-identifying header, and deliberately the whole of it.
- * No OS and no runtime version: the spec fixes the User-Agent at
+ * No OS and no runtime version: the conformance corpus fixes the User-Agent at
  * `sdo-sdk-<lang>/<version>`, and anything appended is extra client
  * fingerprinting the no-telemetry lock forbids.
  */

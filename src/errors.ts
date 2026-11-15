@@ -24,8 +24,8 @@ const MASK = "***";
 const LITERAL_MIN_LENGTH = 8;
 // Credential-shaped values from any source, applied in this order. `\b` is an
 // ASCII word boundary (no `u` flag), so "mytoken=" is not a credential, and
-// whitespace is ASCII only ([ \t\n\r\f\v], as the spec's reference): JavaScript's
-// `\s` would also stop at U+00A0 or U+3000.
+// whitespace is ASCII only ([ \t\n\r\f\v], the set the Go and Python SDKs match):
+// JavaScript's `\s` would also stop at U+00A0 or U+3000.
 const SHAPES: ReadonlyArray<readonly [RegExp, string]> = [
   [/\b((?:token|api[-_]?key|access[-_]?token)=)[^&\t\n\v\f\r "']+/gi, `$1${MASK}`],
   [
