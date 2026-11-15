@@ -11,7 +11,10 @@ decoder (CVE-2026-111497), which a target's `Content-Encoding: br` response
 reaches through the SDK's decompression. Every parameter is described in the
 [API documentation](https://scrape.do/documentation).
 
-> Package: **`@scrape-do/sdk`**.
+> Package: **`@scrape-do/sdk`**. The `sdo` command-line tool is not on npm:
+> install it with Homebrew (`brew install scrape-do/tap/sdo`) or Scoop, see
+> [sdo-cli](https://github.com/scrape-do/sdo-cli). The npm package named `sdo`
+> is unrelated to Scrape.do.
 
 ## Install
 
@@ -315,7 +318,7 @@ of `fetch`). Redirects are still never followed, but that path differs:
 
 Releases are built by GitHub Actions and published to npm with provenance, only
 from `main` and only after a maintainer approves; see
-[CONTRIBUTING.md](CONTRIBUTING.md#ci-workflows).
+[CONTRIBUTING.md](CONTRIBUTING.md#releasing).
 
 ## Responsible use
 
