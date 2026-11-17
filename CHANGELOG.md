@@ -8,6 +8,8 @@ Before 1.0, a minor version may contain breaking changes; each is marked
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-11-17
+
 The first release of `@scrape-do/sdo-client`, the official JavaScript/TypeScript SDK
 for the Scrape.do API. ESM and CommonJS, with type declarations, for Node.js
 22.23.4, 24.22.1 or 26.12.1 or newer.
@@ -161,4 +163,5 @@ for the Scrape.do API. ESM and CommonJS, with type declarations, for Node.js
 - The User-Agent is exactly `sdo-sdk-js/<version>`, the only client-identifying
   header. There is no telemetry.
 
-[Unreleased]: https://github.com/scrape-do/sdo-sdk-js/commits/main
+[Unreleased]: https://github.com/scrape-do/sdo-sdk-js/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/scrape-do/sdo-sdk-js/releases/tag/v0.1.0
