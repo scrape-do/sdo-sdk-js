@@ -5,7 +5,7 @@
 //     export SDO_TOKEN=your_token
 //     npx tsx examples/quickstart.ts
 //
-// (From an installed package, import from "@scrape-do/sdk" instead of "../src/index.js".)
+// (From an installed package, import from "@scrape-do/sdo-client" instead of "../src/index.js".)
 import { Client } from "../src/index.js";
 
 const client = new Client(); // reads SDO_TOKEN

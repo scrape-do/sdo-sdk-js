@@ -11,7 +11,7 @@ decoder (CVE-2026-111497), which a target's `Content-Encoding: br` response
 reaches through the SDK's decompression. Every parameter is described in the
 [API documentation](https://scrape.do/documentation).
 
-> Package: **`@scrape-do/sdk`**. The `sdo` command-line tool is not on npm:
+> Package: **`@scrape-do/sdo-client`**. The `sdo` command-line tool is not on npm:
 > install it with Homebrew (`brew install scrape-do/tap/sdo`) or Scoop, see
 > [sdo-cli](https://github.com/scrape-do/sdo-cli). The npm package named `sdo`
 > is unrelated to Scrape.do.
@@ -19,19 +19,19 @@ reaches through the SDK's decompression. Every parameter is described in the
 ## Install
 
 ```bash
-npm install @scrape-do/sdk
+npm install @scrape-do/sdo-client
 # optional CSS extraction via result.selector() (an optional peer dependency):
 npm install cheerio
 ```
 
-`@scrape-do/sdk` succeeds the earlier `@scrape-do/client` package (from
+`@scrape-do/sdo-client` succeeds the earlier `@scrape-do/client` package (from
 [scrape-do/node-client](https://github.com/scrape-do/node-client)), which will
 be deprecated once 0.1.0 is on npm.
 
 ## Quickstart
 
 ```ts
-import { Client, ScrapeConfig } from "@scrape-do/sdk";
+import { Client, ScrapeConfig } from "@scrape-do/sdo-client";
 
 // Token precedence: new Client({ token }) > SDO_TOKEN env var
 const client = new Client({ token: "YOUR_TOKEN" });

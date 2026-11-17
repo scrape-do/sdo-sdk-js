@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // sdo — official JavaScript/TypeScript SDK for the Scrape.do web-scraping API.
 //
-//   import { Client } from "@scrape-do/sdk";
+//   import { Client } from "@scrape-do/sdo-client";
 //   const client = new Client({ token: "YOUR_TOKEN" }); // or SDO_TOKEN
 //   const result = await client.scrape("https://example.com", { render: true });
 //   console.log(result.statusCode, result.text.slice(0, 200));

@@ -52,7 +52,9 @@ describe("README samples", () => {
       vi.spyOn(console, "log").mockImplementation(() => undefined);
       // A block may use `client` or `result` from the quickstart.
       const preamble = [
-        /import \{[^}]*\bClient\b/.test(code) ? "" : 'import { Client } from "@scrape-do/sdk";',
+        /import \{[^}]*\bClient\b/.test(code)
+          ? ""
+          : 'import { Client } from "@scrape-do/sdo-client";',
         /\bconst client\b/.test(code) ? "" : 'const client = new Client({ token: "YOUR_TOKEN" });',
         !/\bresult\./.test(code) || /\bconst result\b/.test(code)
           ? ""
@@ -60,7 +62,7 @@ describe("README samples", () => {
       ];
       const source = [...preamble, code, "export {};"]
         .join("\n")
-        .replaceAll('"@scrape-do/sdk"', '"../../src/index.js"');
+        .replaceAll('"@scrape-do/sdo-client"', '"../../src/index.js"');
       mkdirSync(dir, { recursive: true });
       const file = new URL(`block-${i + 1}.ts`, dir);
       writeFileSync(file, source);

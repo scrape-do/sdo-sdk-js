@@ -105,8 +105,8 @@ jobs:
         id: registry
         run: |
           version="$(node -p 'require("./package.json").version')"
-          if npm view "@scrape-do/sdk@${version}" version --json >/dev/null 2>&1; then
-            echo "::notice::@scrape-do/sdk@${version} is already on npm; nothing to publish."
+          if npm view "@scrape-do/sdo-client@${version}" version --json >/dev/null 2>&1; then
+            echo "::notice::@scrape-do/sdo-client@${version} is already on npm; nothing to publish."
             echo "published=true" >> "$GITHUB_OUTPUT"
           else
             echo "published=false" >> "$GITHUB_OUTPUT"

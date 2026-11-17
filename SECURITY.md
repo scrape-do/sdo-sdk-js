@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Security Policy
 
-This document describes how to report a vulnerability in **`@scrape-do/sdk`** (the `sdo-sdk-js` repository) and what you can expect from us in return. It is part of the `sdo` open-source project — Scrape.do's official SDK, CLI, and MCP tooling.
+This document describes how to report a vulnerability in **`@scrape-do/sdo-client`** (the `sdo-sdk-js` repository) and what you can expect from us in return. It is part of the `sdo` open-source project — Scrape.do's official SDK, CLI, and MCP tooling.
 
 `sdo-sdk-js` is licensed under **Apache-2.0** and governed under a Solo+AI model: a single founder is the sole approver, contributions are accepted via DCO sign-off (not a CLA), and the project ships **no telemetry** and **no UI** (CLI, SDKs, and MCP only).
 
@@ -19,7 +19,7 @@ Use **either** private channel below — both reach the same maintainer:
 
 Please include as much of the following as you can:
 
-- Affected version(s) of `@scrape-do/sdk` and your Node.js runtime version.
+- Affected version(s) of `@scrape-do/sdo-client` and your Node.js runtime version.
 - A clear description of the issue and its security impact.
 - A minimal, self-contained reproduction (code snippet or steps). **Redact your `SDO_TOKEN`** and any other credentials from logs, stack traces, and snippets.
 - Any known mitigations or workarounds.
@@ -40,7 +40,7 @@ Findings that cause the token (or any portion of it) to be logged, serialized in
 
 ## Supported Versions
 
-Security fixes are released for the **latest minor** of the current major. Older minors do not receive backported patches; upgrade to the latest minor to stay supported (`npm install @scrape-do/sdk@latest`).
+Security fixes are released for the **latest minor** of the current major. Older minors do not receive backported patches; upgrade to the latest minor to stay supported (`npm install @scrape-do/sdo-client@latest`).
 
 | Version | Supported |
 | ------- | --------- |
@@ -68,14 +68,14 @@ We practice coordinated disclosure:
 1. We confirm the report privately and work on a fix in a private branch or advisory workspace.
 2. We prepare a **GitHub Security Advisory (GHSA)** for the repository.
 3. Through the GHSA, we **request a CVE ID** from GitHub (a CNA), so the issue is tracked publicly under a stable identifier.
-4. We publish a patched release on the latest supported minor (npm: **`@scrape-do/sdk`**) and update the `SECURITY.md` supported-versions table.
+4. We publish a patched release on the latest supported minor (npm: **`@scrape-do/sdo-client`**) and update the `SECURITY.md` supported-versions table.
 5. We publish the advisory — including the CVE, affected/fixed versions, impact, and reporter credit — once a fix is available or by mutual agreement on a disclosure date.
 
 We will not pursue legal action against good-faith researchers who follow this policy, avoid privacy violations and service disruption, and give us a reasonable window to remediate before public disclosure.
 
 ## Scope
 
-In scope: vulnerabilities in the `@scrape-do/sdk` package source as published from this repository.
+In scope: vulnerabilities in the `@scrape-do/sdo-client` package source as published from this repository.
 
 Out of scope: issues in the Scrape.do platform/API itself (for those, email support@scrape.do and say the issue is in the Scrape.do service itself rather than in this repository), vulnerabilities solely in third-party dependencies without a demonstrated impact through this SDK, and findings that require a compromised local environment or a leaked `SDO_TOKEN` obtained outside the SDK.
 

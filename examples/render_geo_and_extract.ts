@@ -5,7 +5,7 @@
 //     npm install cheerio
 //     npx tsx examples/render_geo_and_extract.ts
 //
-// (From an installed package, import from "@scrape-do/sdk" instead of "../src/index.js".)
+// (From an installed package, import from "@scrape-do/sdo-client" instead of "../src/index.js".)
 import type { CheerioAPI } from "cheerio";
 import { Client, ScrapeConfig } from "../src/index.js";
 

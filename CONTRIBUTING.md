@@ -1,11 +1,11 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Contributing to sdo-sdk-js
 
-Thanks for helping build the official Scrape.do JavaScript/TypeScript SDK (`@scrape-do/sdk`). This document covers how to set up your environment, the test-first workflow we follow, and the rules every change must satisfy before it can be merged.
+Thanks for helping build the official Scrape.do JavaScript/TypeScript SDK (`@scrape-do/sdo-client`). This document covers how to set up your environment, the test-first workflow we follow, and the rules every change must satisfy before it can be merged.
 
 ## Project at a glance
 
-- **Package:** `@scrape-do/sdk` on npm
+- **Package:** `@scrape-do/sdo-client` on npm
 - **Runtime:** Node.js 22.23.4, 24.22.1 or 26.12.1 or newer (ESM + CJS), for users and development alike. Earlier releases have an out-of-bounds write in the bundled Brotli decoder (CVE-2026-111497), reachable through the SDK's `br` decompression of a target's response. Node.js 20 reached end of life in April 2026 and is not supported
 - **Language:** TypeScript, type-checked with `tsc`, bundled with `tsup`
 - **Tests:** [Vitest](https://vitest.dev/)
@@ -221,7 +221,7 @@ One-time setup before the first release:
    git checkout -- package.json package-lock.json
    ```
 
-3. On npmjs.com, configure the trusted publisher for `@scrape-do/sdk`:
+3. On npmjs.com, configure the trusted publisher for `@scrape-do/sdo-client`:
    repository `scrape-do/sdo-sdk-js`, workflow `publish.yml`, and leave the
    environment field **empty**. npm allows one trusted publisher per package
    and, when an environment is set, accepts only that one, but the workflow
@@ -231,15 +231,15 @@ One-time setup before the first release:
 4. Push the version tag (`v0.1.0-rc.1` or `v0.1.0`). The workflow builds, tests
    and, after approval, publishes it; every later version is published the
    same way. The registry may point `latest` at a new package's first version;
-   if `npm view @scrape-do/sdk dist-tags` shows that, it moves when the
+   if `npm view @scrape-do/sdo-client dist-tags` shows that, it moves when the
    workflow publishes the first final version.
 5. Once 0.1.0 is on npm, retire the placeholder:
-   `npm dist-tag rm @scrape-do/sdk bootstrap` and
-   `npm deprecate @scrape-do/sdk@0.0.0-bootstrap.0 "Placeholder that created the package; install @scrape-do/sdk@latest."`
+   `npm dist-tag rm @scrape-do/sdo-client bootstrap` and
+   `npm deprecate @scrape-do/sdo-client@0.0.0-bootstrap.0 "Placeholder that created the package; install @scrape-do/sdo-client@latest."`
 6. Retire the predecessor. `@scrape-do/client` (repository
    `scrape-do/node-client`) is superseded by this package. Once 0.1.0 is on
    `latest`: `npm deprecate @scrape-do/client@"*" "Superseded by
-   @scrape-do/sdk: https://github.com/scrape-do/sdo-sdk-js"`, put the same
+   @scrape-do/sdo-client: https://github.com/scrape-do/sdo-sdk-js"`, put the same
    pointer at the top of node-client's README, and archive that repository.
    Existing installs keep working; `npm install` prints the notice.
 
