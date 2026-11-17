@@ -88,11 +88,11 @@ async function smoke(label, sdk) {
   }
   check(configError, `${label}: error classes not exported`);
 }
-await smoke("esm", await import("@scrape-do/sdk"));
-await smoke("cjs", require("@scrape-do/sdk"));
+await smoke("esm", await import("@scrape-do/sdo-client"));
+await smoke("cjs", require("@scrape-do/sdo-client"));
 
 // 3. Types for both module systems under node16 resolution.
-const consumer = `import { Client, SdoError, type ScrapeOptions } from "@scrape-do/sdk";
+const consumer = `import { Client, SdoError, type ScrapeOptions } from "@scrape-do/sdo-client";
 const options: ScrapeOptions = { render: true };
 export const run = async (): Promise<string> => {
   try {
@@ -105,7 +105,7 @@ export const run = async (): Promise<string> => {
 };
 `;
 const withCheerio = `import type { CheerioAPI } from "cheerio";
-import { Client } from "@scrape-do/sdk";
+import { Client } from "@scrape-do/sdo-client";
 export const title = async (): Promise<string> =>
   (await (await new Client({ token: "t" }).scrape("https://example.com")).selector<CheerioAPI>())("h1").text();
 `;
@@ -152,7 +152,7 @@ rmSync(inside, { recursive: true, force: true });
 // 3b. Outside it, with only this package installed: cheerio must not resolve.
 const outside = mkdtempSync(join(tmpdir(), "sdo-sdk-js-consumer-"));
 try {
-  const pkgDir = join(outside, "node_modules", "@scrape-do", "sdk");
+  const pkgDir = join(outside, "node_modules", "@scrape-do", "sdo-client");
   mkdirSync(pkgDir, { recursive: true });
   cpSync(join(root, "package.json"), join(pkgDir, "package.json"));
   cpSync(dist, join(pkgDir, "dist"), { recursive: true });

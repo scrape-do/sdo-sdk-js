@@ -1,14 +1,14 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
-# Migrating `@scrape-do/sdk`
+# Migrating `@scrape-do/sdo-client`
 
-This guide describes how to upgrade between versions of the `@scrape-do/sdk`
+This guide describes how to upgrade between versions of the `@scrape-do/sdo-client`
 package (the `sdo` JavaScript/TypeScript SDK). It documents the compatibility
 guarantees you can rely on and the steps required when a release introduces a
 breaking change.
 
 ## Backward-compatibility policy
 
-`@scrape-do/sdk` follows [Semantic Versioning 2.0.0](https://semver.org/).
+`@scrape-do/sdo-client` follows [Semantic Versioning 2.0.0](https://semver.org/).
 
 - **PATCH** (`0.1.0` → `0.1.1`) — bug fixes and internal changes only. No
   observable change to the public API. Safe to take automatically.
@@ -31,7 +31,7 @@ below `0.2.0`):
 ```jsonc
 {
   "dependencies": {
-    "@scrape-do/sdk": "^0.1.0"
+    "@scrape-do/sdo-client": "^0.1.0"
   }
 }
 ```
@@ -97,7 +97,7 @@ are made deliberately, documented here, and shipped only under a major version
 
 ## Migrations
 
-None yet. The first published release of `@scrape-do/sdk` will have no earlier
+None yet. The first published release of `@scrape-do/sdo-client` will have no earlier
 version to migrate from. Future entries will appear here, newest first, each
 with the version boundary, what changed, why, and the exact before/after edit to
 apply.
