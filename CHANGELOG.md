@@ -8,7 +8,7 @@ Before 1.0, a minor version may contain breaking changes; each is marked
 
 ## [Unreleased]
 
-## [0.1.0] - 2026-11-17
+## [0.1.0] - 2026-11-18
 
 The first release of `@scrape-do/sdo-client`, the official JavaScript/TypeScript SDK
 for the Scrape.do API. ESM and CommonJS, with type declarations, for Node.js
