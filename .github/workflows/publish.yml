@@ -117,7 +117,24 @@ jobs:
       - if: steps.registry.outputs.published == 'false'
         env:
           DIST_TAG: ${{ needs.build.outputs.dist_tag }}
+          # Fallback only: npm tries trusted publishing (OIDC) first and uses this
+          # token when the exchange fails. The registry refuses the exchange for
+          # repositories with GitHub's immutable OIDC subject claims, this one
+          # included (npm/cli#9969). The token is publish-only, limited to this
+          # package, and because the account requires 2FA the registry stages the
+          # version until a maintainer approves it on npmjs.com. Remove the secret
+          # once npm accepts the immutable format (see CONTRIBUTING, "Releasing").
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npm publish --provenance --access public --tag "$DIST_TAG"
+      - name: Report whether the version is live or staged
+        if: steps.registry.outputs.published == 'false'
+        run: |
+          version="$(node -p 'require("./package.json").version')"
+          if npm view "@scrape-do/sdo-client@${version}" version --json >/dev/null 2>&1; then
+            echo "::notice::@scrape-do/sdo-client@${version} is live on npm."
+          else
+            echo "::warning::@scrape-do/sdo-client@${version} was accepted but is not live yet: published with the token fallback, the registry stages it. Approve it on npmjs.com (package -> Staged Packages) with 2FA, or run 'npm stage approve'."
+          fi
 
   # `workflow_dispatch` only: proves that npm accepts this workflow's OIDC token
   # for @scrape-do/sdo-client (the trusted publisher configured on npmjs.com)
