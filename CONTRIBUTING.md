@@ -177,7 +177,7 @@ Open the PR against `main` with a clear description of what changed and why. Lin
 | `ci.yml` | every push to `main` and every pull request | Biome formatting and lint check (`lint` job); type check, the test suite with 99% coverage floors on Node 22, 24 and 26 (Linux), plus macOS and Windows on Node 26, including the cross-language conformance suite and its integrity check; the build and `check:dist` (no bundled dependencies, ESM/CJS and TypeScript consumers load it); the public-API snapshot (`api-surface.txt`) must be up to date; CodeQL code scanning. |
 | `commits.yml` | every pull request: opened, updated, reopened, or its title or description edited | the `commits` job checks every commit's subject and sign-off and the pull request title, which becomes the squash commit's subject. A workflow of its own, so editing a pull request re-runs only this check. |
 | `security.yml` | push to `main`, pull requests, and weekly | secret scanning over the full git history (gitleaks), OSV-Scanner over the lockfile, `npm audit`, and an SBOM uploaded as a build artifact. OpenSSF Scorecard runs on pushes to `main` and weekly, with results in code scanning. |
-| `publish.yml` | a version tag, or a manual run | A tag `vX.Y.Z-rc.N` publishes to npm under the `next` dist-tag; `vX.Y.Z` publishes under `latest`. The tag must be on `main` and match both `package.json` and `src/version.ts`. The build job re-runs `npm run typecheck`, `npm run test:cov` (with the coverage floor), `npm run build` and `npm run check:dist` on Node 24; the publish job uses npm trusted publishing with provenance (no stored token) after approval in the `prerelease` or `release` environment, and skips a version that is already on npm; until npm accepts GitHub's immutable OIDC subject claims, a publish-only token in the environment is the fallback and the registry stages the version for 2FA approval on npmjs.com. A manual run (Actions → publish → Run workflow) publishes nothing: its `publisher-check` job only confirms that npm accepts this workflow's OIDC token for the package, after approval in the `release` environment. |
+| `publish.yml` | a version tag, or a manual run | A tag `vX.Y.Z-rc.N` publishes to npm under the `next` dist-tag; `vX.Y.Z` publishes under `latest`. The tag must be on `main` and match both `package.json` and `src/version.ts`. The build job re-runs `npm run typecheck`, `npm run test:cov` (with the coverage floor), `npm run build` and `npm run check:dist` on Node 24; the publish job uses npm trusted publishing with provenance (no stored token) after approval in the `prerelease` or `release` environment, and skips a version that is already on npm; if trusted publishing fails (npm does not yet accept GitHub's immutable OIDC subject claims), it stages the version with the environment's stage-only `NPM_TOKEN` instead, for 2FA approval on npmjs.com. A manual run (Actions → publish → Run workflow) publishes nothing: its `publisher-check` job only confirms that npm accepts this workflow's OIDC token for the package, after approval in the `release` environment. |
 | Dependabot | weekly | update pull requests for npm dependencies and the GitHub Actions, taken only after a 7-day cooldown; each one runs the checks above. |
 
 Every job runs on GitHub-hosted runners except CodeQL and Scorecard, which run on the organisation's self-hosted runners: their uploads are GitHub API calls that the organisation's IP allow list only accepts from there. CodeQL runs there for same-repository events only, so a pull request from a fork is analysed once merged; Scorecard never runs on a pull request. Every action is pinned to a full commit SHA and every job declares least-privilege `permissions:`. Publishing never happens outside the `scrape-do` organisation, never from a commit that is not on `main`, and never without a maintainer's approval.
@@ -246,19 +246,51 @@ One-time setup before the first release:
 npm only accepts provenance from a public source repository; this repository
 is public, so the workflow publishes with provenance.
 
-**Temporary token fallback.** npm's registry rejects the OIDC token exchange for
+### npm token
+
+npm's registry rejects the trusted-publishing (OIDC) token exchange for
 repositories that use GitHub's immutable OIDC subject claims, which is every
 repository created after 2026-07-15, this one included
-([npm/cli#9969](https://github.com/npm/cli/issues/9969)); the manual run of
-the publish workflow (job `publisher-check`) shows the refusal. Until npm fixes
-it, the `release` and `prerelease` environments hold a publish-only granular
-token for `@scrape-do/sdo-client` as the secret `NPM_TOKEN` (one-year expiry,
-no 2FA bypass). npm still tries OIDC first and uses the token only when the
-exchange fails. Because the account requires 2FA, a token publish is *staged*:
-the workflow succeeds, and a maintainer approves the version on npmjs.com
-(package → Staged Packages) or with `npm stage approve` before it goes live.
-When the manual run reports that npm accepted the exchange, delete the secret
-and revoke the token.
+([npm/cli#9969](https://github.com/npm/cli/issues/9969)); a manual run of the
+publish workflow (job `publisher-check`) shows the refusal. Until npm fixes it,
+the publish job tries trusted publishing first and, when that fails, runs
+`npm stage publish` with a **stage-only** granular token kept in the `release`
+and `prerelease` environments as the secret `NPM_TOKEN`. A staged version is
+not installable until a maintainer approves it with 2FA, so the token alone can
+never put a version on npm. Stage-only is also the token type that keeps
+working after npm removes direct publishing with granular tokens (January 2027).
+
+Create the token on npmjs.com (npm documents granular tokens as website-only):
+
+1. Profile picture → **Access Tokens** → **Generate New Token**.
+2. **Token name** `sdo-sdk-js-release`; **Description** `GitHub Actions
+   fallback for scrape-do/sdo-sdk-js (npm/cli#9969)`.
+3. Leave **Bypass two-factor authentication** unchecked and **Allowed IP
+   Ranges** empty (GitHub-hosted runners have no fixed range).
+4. **Packages and scopes** → **Permissions** `Read and write (stage only)` →
+   **Only select packages and scopes** → `@scrape-do/sdo-client`.
+5. **Organizations** → **Permissions** `No access`.
+6. **Expiration** → **Custom** → one year from today.
+7. **Generate Token** and copy it once; npm never shows it again.
+
+Store it in both environments, pasting the token when `gh` prompts so it never
+lands in shell history or a file:
+
+```bash
+gh secret set NPM_TOKEN --repo scrape-do/sdo-sdk-js --env release
+gh secret set NPM_TOKEN --repo scrape-do/sdo-sdk-js --env prerelease
+gh api repos/scrape-do/sdo-sdk-js/environments/release/secrets --jq '.secrets[].name'
+```
+
+After a release run, approve the staged version on npmjs.com (package →
+**Staged Packages** → **Approve**, with 2FA) or from a terminal with
+`npm stage list @scrape-do/sdo-client` and `npm stage approve <stage-id>`.
+
+Renew the token before it expires: generate a new one the same way, run the
+two `gh secret set` commands again, then delete the old token on npmjs.com.
+When a manual run of the publish workflow reports that npm accepted the OIDC
+exchange, delete the `NPM_TOKEN` secret from both environments and the token
+from npmjs.com.
 
 ## Reporting bugs and proposing changes
 
