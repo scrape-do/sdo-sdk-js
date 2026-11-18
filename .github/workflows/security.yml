@@ -13,6 +13,17 @@ on:
 
 permissions: {}
 
+# Advisories accepted for a limited time, one per line:
+#   <advisory id> <expiry, YYYY-MM-DD> <reason>
+# Both dependency scans below build their ignore list from this variable only:
+# an osv-scanner.toml elsewhere in the checkout is ignored, so accepting an
+# advisory is always a visible change to this workflow. After the expiry date the advisory fails
+# both jobs again; re-assess it then. Dependabot opens a pull request as soon as
+# a patched version exists.
+env:
+  ACCEPTED_ADVISORIES: |-
+    GHSA-fc5q-39xc-vjpf 2026-12-18 picomatch ReDoS, no patched release (<= 4.0.7 affected); reached only through the dev tools tsup and vitest, which match repository-defined globs, and @scrape-do/sdo-client ships no dependencies
+
 # Every job runs on GitHub-hosted runners except Scorecard, which reads the
 # repository through the GitHub API: the org's IP allow list only accepts
 # those calls from the self-hosted runners.
@@ -56,9 +67,23 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      # The config is generated here and passed with --config, which replaces
+      # any osv-scanner.toml in the checkout.
+      - name: Write the scanner config from ACCEPTED_ADVISORIES
+        run: |
+          set -euo pipefail
+          out=osv-scanner.ci.toml
+          : > "$out"
+          while read -r id until reason; do
+            [ -n "$id" ] || continue
+            reason="${reason//\\/}"; reason="${reason//\"/}"
+            printf '[[IgnoredVulns]]\nid = "%s"\nignoreUntil = %sT00:00:00Z\nreason = "%s"\n\n' "$id" "$until" "$reason" >> "$out"
+          done <<< "$ACCEPTED_ADVISORIES"
+          cat "$out"
       - uses: google/osv-scanner-action/osv-scanner-action@b1d267aea5211fa648d9d442fa64b90dbdcbdd36 # v2.7.0
         with:
           scan-args: |-
+            --config=./osv-scanner.ci.toml
             --lockfile=./package-lock.json
 
   # Native npm advisory audit as a second dependency gate.
@@ -73,7 +98,48 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "24"
-      - run: npm audit --audit-level=high
+      # npm audit has no per-advisory ignore, so the gate is applied here: any
+      # high or critical advisory fails the job unless ACCEPTED_ADVISORIES lists
+      # it and its expiry date has not passed.
+      - name: npm audit (high and critical)
+        run: |
+          set -uo pipefail
+          npm audit --json > audit.json || true
+          node - <<'JS'
+          const fs = require("node:fs");
+          const report = JSON.parse(fs.readFileSync("audit.json", "utf8"));
+          if (report.error) { console.error("npm audit failed:", report.error.summary || report.error); process.exit(1); }
+          const today = new Date().toISOString().slice(0, 10);
+          const accepted = new Map();
+          for (const line of (process.env.ACCEPTED_ADVISORIES || "").split("\n")) {
+            const [id, until, ...reason] = line.trim().split(/\s+/);
+            if (id) accepted.set(id, { until, reason: reason.join(" ") });
+          }
+          const found = new Map();
+          for (const [pkg, v] of Object.entries(report.vulnerabilities || {})) {
+            for (const via of v.via || []) {
+              if (typeof via !== "object" || !["high", "critical"].includes(via.severity)) continue;
+              const id = (via.url || "").split("/").pop() || String(via.source);
+              found.set(id, { pkg, severity: via.severity, title: via.title, range: via.range });
+            }
+          }
+          let failed = false;
+          for (const [id, f] of found) {
+            const a = accepted.get(id);
+            if (a && today <= a.until) {
+              console.log(`accepted until ${a.until}: ${id} ${f.severity} ${f.pkg} ${f.range} (${f.title})`);
+            } else {
+              failed = true;
+              const why = a ? `acceptance expired on ${a.until}` : "not accepted";
+              console.log(`::error::${id} ${f.severity} in ${f.pkg} ${f.range}: ${f.title} (${why})`);
+            }
+          }
+          for (const [id, a] of accepted) {
+            if (!found.has(id)) console.log(`::notice::${id} is accepted until ${a.until} but npm audit no longer reports it; remove it from ACCEPTED_ADVISORIES.`);
+          }
+          console.log(`${found.size} high/critical advisories, ${failed ? "some not accepted" : "all accepted"}.`);
+          process.exit(failed ? 1 : 0);
+          JS
 
   # Generate an SPDX SBOM (syft) and upload it as a workflow artifact.
   sbom:
